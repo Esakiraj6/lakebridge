@@ -452,19 +452,21 @@ def configure_reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient, source_directory: str, report_file: str):
+def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None):
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
     prompts = ctx.prompts
     output_file = report_file
     input_folder = source_directory
-    source_tech = prompts.choice("Select the source technology", Analyzer.supported_source_technologies())
+    if source_tech is None:
+        source_tech = prompts.choice("Select the source technology", Analyzer.supported_source_technologies())
     with_user_agent_extra("analyzer_source_tech", make_alphanum_or_semver(source_tech))
     user = ctx.current_user
     logger.debug(f"User: {user}")
     is_debug = logger.getEffectiveLevel() == logging.DEBUG
     Analyzer.analyze(Path(input_folder), Path(output_file), source_tech, is_debug=is_debug)
+    logger.info(f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}")
 
 
 if __name__ == "__main__":
