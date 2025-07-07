@@ -37,28 +37,6 @@ def test_gets_pypi_artifact_version():
     check_valid_version(version)
 
 
-def test_downloads_tar_from_pypi():
-    with TemporaryDirectory() as parent:
-        path = Path(parent) / "archive.tar"
-        result = WheelInstaller.download_artifact_from_pypi(
-            "databricks-labs-remorph-community-transpiler", "0.0.1", path, extension="tar"
-        )
-        assert result == 0
-        assert path.exists()
-        assert path.stat().st_size == 41_656
-
-
-def test_downloads_whl_from_pypi():
-    with TemporaryDirectory() as parent:
-        path = Path(parent) / "package.whl"
-        result = WheelInstaller.download_artifact_from_pypi(
-            "databricks-labs-remorph-community-transpiler", "0.0.1", path
-        )
-        assert result == 0
-        assert path.exists()
-        assert path.stat().st_size == 35_270
-
-
 @pytest.fixture()
 def patched_transpiler_installer(tmp_path: Path):
     resources_folder = Path(__file__).parent.parent.parent / "resources" / "transpiler_configs"

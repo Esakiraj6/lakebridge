@@ -182,22 +182,6 @@ class WheelInstaller(TranspilerInstaller):
             logger.error(f"Error while fetching PyPI metadata: {product_name}", exc_info=e)
             return None
 
-    @classmethod
-    def download_artifact_from_pypi(cls, product_name: str, version: str, target: Path, extension="whl") -> int:
-        suffix = "-py3-none-any.whl" if extension == "whl" else ".tar.gz" if extension == "tar" else f".{extension}"
-        filename = f"{product_name.replace('-', '_')}-{version}{suffix}"
-        url = f"https://pypi.debian.net/{product_name}/{filename}"
-        try:
-            path, _ = request.urlretrieve(url)
-            logger.info(f"Successfully downloaded {path}")
-            if not target.exists():
-                logger.info(f"Moving {path} to {target!s}")
-                move(path, target)
-            return 0
-        except URLError as e:
-            logger.error("While downloading from pypi", exc_info=e)
-            return -1
-
     def __init__(self, product_name: str, pypi_name: str, artifact: Path | None = None):
         self._product_name = product_name
         self._pypi_name = pypi_name
