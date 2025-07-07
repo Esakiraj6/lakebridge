@@ -1,5 +1,10 @@
 # Version changelog
 
+## 0.10.4
+
+* Added Source Tech Override for Analyzer ([#1806](https://github.com/databrickslabs/lakebridge/issues/1806)). The Analyzer command has been enhanced with a `source-tech` flag, allowing users to specify the Source System Technology to analyze directly in the command line call.
+* Patch user agent for Infa ([#1807](https://github.com/databrickslabs/lakebridge/issues/1807)). Improved user agent handling for dialects with spaces and added Informatica PC support.
+
 ## 0.10.3
 
 # Converter Improvements
