@@ -661,7 +661,9 @@ def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_
     logger.debug(f"User: {user}")
     is_debug = logger.getEffectiveLevel() == logging.DEBUG
     Analyzer.analyze(Path(input_folder), Path(output_file), source_tech, is_debug=is_debug)
-    logger.info(f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}")
+    logger.info(
+        f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}"
+    )
 
 
 if __name__ == "__main__":
