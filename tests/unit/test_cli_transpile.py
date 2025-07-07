@@ -28,7 +28,7 @@ def stubbed_transpiler_config_path(tmp_path: Path) -> Path:
         "remorph": {
             "version": 1,
             "name": "Stubbed LSP Transpiler Configuration",
-            "dialects": ["snowflake"],
+            "dialects": ["snowflake", "informatica pc"],
             "command_line": ["/usr/bin/true"],
         },
         "options": {
@@ -273,3 +273,9 @@ def test_transpile_prints_errors(caplog, tmp_path: Path, mock_workspace_client: 
         )
 
     assert any(str(input_source) in record.message for record in caplog.records)
+
+
+def test_transpile_informatica_transpiler_dialect(mock_cli_for_transpile) -> None:
+    ws, _, _, _ = mock_cli_for_transpile
+    # Test with Informatica PC dialect ensure user agent handles sources dialect with spaces in them
+    cli.transpile(w=ws, source_dialect="informatica pc")
