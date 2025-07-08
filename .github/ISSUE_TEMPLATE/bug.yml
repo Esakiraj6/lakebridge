@@ -64,12 +64,12 @@ body:
   - type: checkboxes
     attributes:
       label: Logs Confirmation
-      description: Please confirm the following regarding logs. Please ensure you have redacted any personal identifying information (PII) from the logs.
+      description: Additional logs will helps us, Please confirm the following regarding logs. Please ensure you have redacted any personal identifying information (PII) from the logs.
       options:
         - label: I ran the command line with `--debug`
-          required: true
+          required: false
         - label: I have attached the `lsp-server.log` under USER_HOME/.databricks/labs/remorph-transpilers/<converter_name>/lib/lsp-server.log
-          required: true
+          required: false
 
   - type: textarea
     id: query
