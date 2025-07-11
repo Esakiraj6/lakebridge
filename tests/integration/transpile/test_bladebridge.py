@@ -43,6 +43,7 @@ async def _transpile_informatica_with_sparksql(
         transpiler_options={"target-tech": "SPARKSQL"},
     )
     await transpile(ws, lsp_engine, transpile_config)
+    # TODO: This seems to be flaky; debug logging to help diagnose the flakiness.
     files = [f.name for f in output_folder.iterdir()]
     logger.debug(f"Transpiled files: {files}")
     assert (output_folder / "m_employees_load.py").exists()
