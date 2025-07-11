@@ -33,7 +33,7 @@ dependencies = [
   "sqlglot==26.1.3",
   # TODO: Replace before merging to main.
   #"databricks-labs-blueprint[yaml]>=0.11.2,<0.12.0",
-  "databricks-labs-blueprint @ git+https://github.com/databrickslabs/blueprint@xml-encoding-detection",
+  "databricks-labs-blueprint @ git+https://github.com/databrickslabs/blueprint@main",
   "databricks-labs-lsql==0.16.0",
   "cryptography>=44.0.2,<45.1.0",
   "pyodbc~=5.2.0",
