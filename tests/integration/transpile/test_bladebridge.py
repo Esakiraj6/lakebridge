@@ -44,5 +44,7 @@ async def _transpile_informatica_with_sparksql(
         schema_name="schema",
         transpiler_options={"target-tech": "SPARKSQL"},
     )
-    result = await transpile(ws, lsp_engine, transpile_config)
-    logger.info(result)
+    await transpile(ws, lsp_engine, transpile_config)
+    assert (output_folder / "m_employees_load.py").exists()
+    assert (output_folder / "wf_m_employees_load.json").exists()
+    assert (output_folder / "wf_m_employees_load_params.py").exists()
