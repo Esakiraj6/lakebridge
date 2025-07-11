@@ -15,10 +15,6 @@ from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 logger = logging.getLogger(__name__)
 
 
-# TODO use artifact from PyPI once 0.1.5 is published
-@pytest.mark.skipif(
-    os.environ.get("CI", "false") == "true", reason="Skipping in CI Since LSP crashes on Acceptance tests"
-)
 async def test_transpiles_informatica_with_sparksql(
     ws: WorkspaceClient, bladebridge_artifact: Path, tmp_path: Path
 ) -> None:
