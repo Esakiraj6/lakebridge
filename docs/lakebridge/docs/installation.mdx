@@ -75,7 +75,17 @@ Upon completing the environment setup, install Lakebridge by executing the follo
 ```bash
 databricks labs install lakebridge
 ```
+This will install Lakebridge using the workspace details set in the DEFAULT profile. If you want to install it using a different profile, you can specify the profile name using the `--profile` flag.
+```bash
+databricks labs install lakebridge --profile <profile_name>
+```
+
+To view all the profiles available, you can run the following command:
+```bash
+databricks auth profiles
+```
 <img src={useBaseUrl('img/Install_Lakebridge.gif')} alt="lakebridge-install" />
+
 
 ### Verify Installation
 Verify the successful installation by executing the provided command;
