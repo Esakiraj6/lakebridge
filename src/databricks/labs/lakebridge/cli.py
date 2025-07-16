@@ -642,9 +642,7 @@ def configure_reconcile(w: WorkspaceClient):
     if not w.config.warehouse_id:
         dbsql_id = _create_warehouse(w)
         w.config.warehouse_id = dbsql_id
-        logger.debug(f"Created SQL Warehouse with warehouse_id: {dbsql_id}")
-    else:
-        logger.debug(f"Warehouse ID found in config: {w.config.warehouse_id}, skipping warehouse creation.")
+    logger.debug(f"Warehouse ID used for configuring reconcile: {w.config.warehouse_id}.")
     installer = _installer(w)
     installer.run(module="reconcile")
 
