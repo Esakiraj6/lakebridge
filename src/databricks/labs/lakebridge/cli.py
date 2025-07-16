@@ -642,13 +642,11 @@ def configure_reconcile(w: WorkspaceClient):
     if not w.config.warehouse_id:
         dbsql_id = _create_warehouse(w)
         w.config.warehouse_id = dbsql_id
-        installer = _installer(w)
-        installer.run(module="reconcile")
-        _remove_warehouse(w, dbsql_id)
+        logger.debug(f"Created SQL Warehouse with warehouse_id: {dbsql_id}")
     else:
-        logger.info(f"Warehouse ID found in config: {w.config.warehouse_id}, skipping warehouse creation")
-        installer = _installer(w)
-        installer.run(module="reconcile")
+        logger.debug(f"Warehouse ID found in config: {w.config.warehouse_id}, skipping warehouse creation.")
+    installer = _installer(w)
+    installer.run(module="reconcile")
 
 
 @lakebridge.command()
