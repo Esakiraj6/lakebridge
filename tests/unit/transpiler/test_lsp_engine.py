@@ -14,7 +14,7 @@ from databricks.labs.blueprint.wheels import ProductInfo
 
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.errors.exceptions import IllegalStateException
-from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import ChangeManager, LSPEngine
+from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import ChangeManager, LSPEngine, TranspileDocumentResult
 from databricks.labs.lakebridge.transpiler.transpile_status import TranspileError, ErrorSeverity, ErrorKind
 
 from tests.unit.conftest import path_to_resource
@@ -126,6 +126,26 @@ async def test_server_closes_document(lsp_engine: LSPEngine, transpile_config: T
     lsp_engine.close_document(sample_path)
     log = await read_log("close-document-uri")
     assert f"close-document-uri={sample_path.as_uri()}" in log
+
+
+async def test_server_transpiles_document(lsp_engine: LSPEngine, transpile_config: TranspileConfig) -> None:
+    """Test the simplest transpile workflow, where the LSP server reads a file from the filesystem."""
+    sample_path = Path(path_to_resource("lsp_transpiler", "source_stuff.sql"))
+    await lsp_engine.initialize(transpile_config)
+    # No need to open the document first, or close it afterwards: LSP server can read from filesystem.
+    result = await lsp_engine.transpile_document(sample_path)
+    await lsp_engine.shutdown()
+
+    sample_line_count = len(sample_path.read_text(encoding="utf-8").splitlines())
+    sample_whole_file_range = Range(Position(0, 0), Position(sample_line_count, 0))
+    expected_source = Path(path_to_resource("lsp_transpiler", "transpiled_stuff.sql")).read_text(encoding="utf-8")
+    expected_result = TranspileDocumentResult(
+        uri=sample_path.as_uri(),
+        language_id="sql",
+        diagnostics=[],
+        changes=[TextEdit(sample_whole_file_range, new_text=expected_source)],
+    )
+    assert result == expected_result
 
 
 async def test_server_transpiles_from_memory(lsp_engine: LSPEngine, transpile_config: TranspileConfig) -> None:
