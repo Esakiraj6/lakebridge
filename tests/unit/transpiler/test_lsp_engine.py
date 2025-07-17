@@ -128,11 +128,12 @@ async def test_server_closes_document(lsp_engine: LSPEngine, transpile_config: T
     assert f"close-document-uri={sample_path.as_uri()}" in log
 
 
-async def test_server_transpiles_document(lsp_engine, transpile_config):
+async def test_server_transpiles_document(lsp_engine: LSPEngine, transpile_config: TranspileConfig) -> None:
     sample_path = Path(path_to_resource("lsp_transpiler", "source_stuff.sql"))
     await lsp_engine.initialize(transpile_config)
+    assert (source_dialect := transpile_config.source_dialect) is not None
     result = await lsp_engine.transpile(
-        transpile_config.source_dialect, "databricks", sample_path.read_text(encoding="utf-8"), sample_path
+        source_dialect, "databricks", sample_path.read_text(encoding="utf-8"), sample_path
     )
     await lsp_engine.shutdown()
     transpiled_path = Path(path_to_resource("lsp_transpiler", "transpiled_stuff.sql"))
