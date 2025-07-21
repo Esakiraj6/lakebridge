@@ -20,15 +20,13 @@ In some migration projects, users may want to deviate from the conversion rules 
 - Custom-control the output
 - Troubleshoot issues
 
-## Configuration Entry Points
-For each source and target technology combination, BladeBridge uses the file `tech_mapper_main.json`.  For example, it may have an entry for Synapse to Databricks SQL conversion, or for InfaPC to Pyspark or SparkSQL conversion.  These are the entry point configurations that in some cases branch out to other configuration files or inherit from base files.
 
-When the source and target technologies are specified at the Lakebridge prompt or on the command line, Lakebridge will choose the appropriate file to pass to the Bladebridge converter
-
-## Supplying Custom Entry Point Configuration
-When running the Bladebridge converter from Lakebridge, one can create a custom configuration file and supply it con the command line:
+## Supplying Custom Configuration File
+When running the Bladebridge converter from Lakebridge, a custom configuration file can be supplied to the converter in case custom rules or new technology support is required.  In order to register a custom configuration file for transpilation, we need to execute the `install-transpile` command and at one of the prompts specify the custom configuration file path:
 ```bash
-databricks labs lakebridge transpile --transpiler-config-path $HOME/project001/techX2Databricks.json
+databricks labs lakebridge install-transpile
+Do you want to override the existing installation? (default: no): yes
+Specify the file to use for overrides - press <enter> for none (default: <none>): /projects/sourceX2databricks.json
 ```
 
 Please read the subsequent sections of this document to learn how to create and extend Bladebridge configurations
