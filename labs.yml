@@ -22,7 +22,7 @@ commands:
     description: Transpile SQL script to Databricks SQL
     flags:
       - name: transpiler-config-path
-        description: Path to the transpiler configuration file [for transpilers (Morpheus/Bladebridge/SQLGLot)]
+        description: Path to the transpiler configuration file [Pluggable Transpilers] eg: Morpheus/Bladebridge
         default: null
       - name: source-dialect
         description: Dialect name (datastage, informatica (desktop edition), mssql, netezza, oracle, synapse, teradata etc)
