@@ -17,6 +17,7 @@ curl -sSL -O "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/${PKG_N
 printf "%s *packages-microsoft-prod.deb\n" "${expected_hash}" | sha256sum -c -
 
 # Add the Microsoft GPG key since the deb package does not do it automatically
+sudo rm -f /usr/share/keyrings/microsoft-prod.gpg
 curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --batch -o /usr/share/keyrings/microsoft-prod.gpg
 
 sudo dpkg -i packages-microsoft-prod.deb
