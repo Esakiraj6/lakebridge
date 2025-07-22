@@ -8,11 +8,11 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import InvalidParameterValue
 from databricks.sdk.service import iam
 
-from databricks.labs.remorph.config import RemorphConfigs, ReconcileConfig, DatabaseConfig, ReconcileMetadataConfig
-from databricks.labs.remorph.deployment.dashboard import DashboardDeployment
-from databricks.labs.remorph.deployment.job import JobDeployment
-from databricks.labs.remorph.deployment.recon import ReconDeployment
-from databricks.labs.remorph.deployment.table import TableDeployment
+from databricks.labs.lakebridge.config import RemorphConfigs, ReconcileConfig, DatabaseConfig, ReconcileMetadataConfig
+from databricks.labs.lakebridge.deployment.dashboard import DashboardDeployment
+from databricks.labs.lakebridge.deployment.job import JobDeployment
+from databricks.labs.lakebridge.deployment.recon import ReconDeployment
+from databricks.labs.lakebridge.deployment.table import TableDeployment
 
 
 @pytest.fixture
@@ -108,7 +108,7 @@ def test_install(ws):
 
     ws.lakeview.trash.side_effect = raise_invalid_parameter_err_for_dashboard
     ws.jobs.delete.side_effect = raise_invalid_parameter_err_for_job
-    recon_deployer.install(reconcile_config, ["remorph-x.y.z-py3-none-any.whl"])
+    recon_deployer.install(reconcile_config, ["lakebridge-x.y.z-py3-none-any.whl"])
     table_deployer.deploy_table_from_ddl_file.assert_called()
     job_deployer.deploy_recon_job.assert_called()
     dashboard_deployer.deploy.assert_called()

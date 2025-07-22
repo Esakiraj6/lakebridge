@@ -135,9 +135,10 @@ class TestLspServer(LanguageServer):
         logger.debug(f"fetch-document-uri={uri}: {doc.source}")
 
     def transpile_to_databricks(self, params: TranspileDocumentParams) -> TranspileDocumentResult:
-        source_sql = self.workspace.get_text_document(params.uri).source
-        source_lines = source_sql.split("\n")
-        range = Range(start=Position(0, 0), end=Position(len(source_lines), len(source_lines[-1])))
+        document = self.workspace.get_text_document(params.uri)
+        line_count = len(document.lines)
+        source_sql = document.source
+        range = Range(start=Position(0, 0), end=Position(line_count, 0))
         transpiled_sql, diagnostics = self._transpile(Path(params.uri).name, range, source_sql)
         changes = [TextEdit(range=range, new_text=transpiled_sql)]
         return TranspileDocumentResult(
@@ -169,6 +170,10 @@ class TestLspServer(LanguageServer):
                 code="SOME_ERROR_CODE",
             )
             return source_sql, [diagnostic]
+        elif file_name == "workflow.xml":
+            combined = Path(__file__).parent / "aggregated_output.mime"
+            output = combined.read_text("utf-8")
+            return output, []
         else:
             # general test case
             return source_sql.upper(), []

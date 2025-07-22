@@ -1,7 +1,7 @@
 all: clean dev fmt lint test
 
 clean:
-	rm -fr .venv clean htmlcov .mypy_cache .pytest_cache .ruff_cache .coverage coverage.xml .python-version
+	rm -rf .direnv .venv clean htmlcov .mypy_cache .pytest_cache .ruff_cache .coverage coverage.xml .python-version
 
 setup_python:
 	@echo "You have selected python setup with pyenv. It will install pyenv on your system."
@@ -46,23 +46,23 @@ clean_coverage_dir:
 	rm -fr ${OUTPUT_DIR}
 
 python_coverage_report:
-	hatch run python src/databricks/labs/remorph/coverage/remorph_snow_transpilation_coverage.py
+	hatch run python src/databricks/labs/lakebridge/coverage/lakebridge_snow_transpilation_coverage.py
 	hatch run pip install --upgrade sqlglot
-	hatch -e sqlglot-latest run python src/databricks/labs/remorph/coverage/sqlglot_snow_transpilation_coverage.py
-	hatch -e sqlglot-latest run python src/databricks/labs/remorph/coverage/sqlglot_tsql_transpilation_coverage.py
+	hatch -e sqlglot-latest run python src/databricks/labs/lakebridge/coverage/sqlglot_snow_transpilation_coverage.py
+	hatch -e sqlglot-latest run python src/databricks/labs/lakebridge/coverage/sqlglot_tsql_transpilation_coverage.py
 
 dialect_coverage_report: clean_coverage_dir python_coverage_report
-	hatch run python src/databricks/labs/remorph/coverage/local_report.py
+	hatch run python src/databricks/labs/lakebridge/coverage/local_report.py
 
 
 docs-build:
-	yarn --cwd docs/remorph build
+	yarn --cwd docs/lakebridge build
 
 docs-serve-dev:
-	yarn --cwd docs/remorph start
+	yarn --cwd docs/lakebridge start
 
 docs-install:
-	yarn --cwd docs/remorph install
+	yarn --cwd docs/lakebridge install
 
 docs-serve: docs-build
-	yarn --cwd docs/remorph serve
+	yarn --cwd docs/lakebridge serve
