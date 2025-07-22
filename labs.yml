@@ -34,7 +34,7 @@ commands:
         description: Output Location For Storing Transpiled Code, defaults to (Current Working Directory> `<pwd>/transpiled` folder
         default: null
       - name: error-file-path
-        description: Output Location For Storing Errors, defaults to (Present Working Directory> `<pwd>/errors.log`
+        description: Output Location For Storing Errors, defaults to (Current Working Directory> `<pwd>/errors.log`
         default: null
       - name: skip-validation
         description: Validate Transpiled Code, default True validation skipped, False validate
