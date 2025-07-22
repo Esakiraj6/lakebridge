@@ -19,5 +19,8 @@ printf "%s *packages-microsoft-prod.deb\n" "${expected_hash}" | sha256sum -c -
 sudo dpkg -i packages-microsoft-prod.deb
 #rm packages-microsoft-prod.deb
 
+# Add the Microsoft GPG key since the deb package does not do it automatically
+curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+
 sudo apt-get update
 sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
