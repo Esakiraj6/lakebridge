@@ -442,8 +442,7 @@ class MavenInstaller(TranspilerInstaller):
 
     def _install_version(self, version: str) -> Path | None:
         logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        # use type(self) to workaround a mock bug on class methods
-        self._product_path = type(self).transpilers_path() / self._product_name
+        self._product_path = self.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if backup_path.exists():
             rmtree(backup_path)
