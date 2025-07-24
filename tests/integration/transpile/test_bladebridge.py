@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 async def test_transpiles_informatica_with_sparksql(
-    ws: WorkspaceClient, bladebridge_artifact: Path, tmp_path: Path
+    ws: WorkspaceClient,
+    bladebridge_artifact: Path,
+    tmp_path: Path,
 ) -> None:
     labs_path = tmp_path / "labs"
     output_folder = tmp_path / "output"
@@ -23,7 +25,9 @@ async def test_transpiles_informatica_with_sparksql(
 
 
 async def _transpile_informatica_with_sparksql(
-    ws: WorkspaceClient, bladebridge_artifact: Path, output_folder: Path
+    ws: WorkspaceClient,
+    bladebridge_artifact: Path,
+    output_folder: Path,
 ) -> None:
     bladebridge = TranspilerInstaller.transpilers_path() / "bladebridge"
     assert not bladebridge.exists()

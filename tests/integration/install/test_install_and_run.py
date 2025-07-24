@@ -36,7 +36,10 @@ def format_transpiled(sql: str) -> str:
 
 
 async def run_lsp_operations_sync(
-    lsp_engine: LSPEngine, transpile_config: TranspileConfig, input_source: str, sql_code: str
+    lsp_engine: LSPEngine,
+    transpile_config: TranspileConfig,
+    input_source: str,
+    sql_code: str,
 ) -> TranspileResult:
     """Helper function to run LSP operations synchronously"""
     await lsp_engine.initialize(transpile_config)

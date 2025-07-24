@@ -765,9 +765,7 @@ class WorkspaceInstaller:
             return None
         return {option.flag: option.prompt_for_value(self._prompts) for option in config_options}
 
-    def _configure_catalog(
-        self,
-    ) -> str:
+    def _configure_catalog(self) -> str:
         return self._resource_configurator.prompt_for_catalog_setup()
 
     def _configure_schema(
