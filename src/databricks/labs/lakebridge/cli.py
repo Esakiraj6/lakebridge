@@ -520,7 +520,7 @@ async def _transpile(ctx: ApplicationContext, config: TranspileConfig, engine: T
     return [status]
 
 
-def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[str, str] | None):
+def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[str, str] | None) -> None:
     """
     Override the Workspace client's SDK config with the user provided SDK config.
     Users can provide the cluster_id and warehouse_id during the installation.
@@ -539,7 +539,7 @@ def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[s
 
 
 @lakebridge.command
-def reconcile(w: WorkspaceClient):
+def reconcile(w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-reconcile")
     ctx = ApplicationContext(w)
@@ -555,7 +555,7 @@ def reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command
-def aggregates_reconcile(w: WorkspaceClient):
+def aggregates_reconcile(w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles Aggregated source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-aggregates-reconcile")
     ctx = ApplicationContext(w)
@@ -572,7 +572,13 @@ def aggregates_reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command
-def generate_lineage(w: WorkspaceClient, *, source_dialect: str | None = None, input_source: str, output_folder: str):
+def generate_lineage(
+    w: WorkspaceClient,
+    *,
+    source_dialect: str | None = None,
+    input_source: str,
+    output_folder: str,
+) -> None:
     """[Experimental] Generates a lineage of source SQL files or folder"""
     ctx = ApplicationContext(w)
     logger.debug(f"User: {ctx.current_user}")
@@ -593,7 +599,7 @@ def generate_lineage(w: WorkspaceClient, *, source_dialect: str | None = None, i
 
 
 @lakebridge.command
-def configure_secrets(w: WorkspaceClient):
+def configure_secrets(w: WorkspaceClient) -> None:
     """Setup reconciliation connection profile details as Secrets on Databricks Workspace"""
     recon_conf = ReconConfigPrompts(w)
 
@@ -605,7 +611,7 @@ def configure_secrets(w: WorkspaceClient):
 
 
 @lakebridge.command(is_unauthenticated=True)
-def configure_database_profiler():
+def configure_database_profiler() -> None:
     """[Experimental] Install the lakebridge Assessment package"""
     prompts = Prompts()
 
@@ -620,7 +626,7 @@ def configure_database_profiler():
 
 
 @lakebridge.command()
-def install_transpile(w: WorkspaceClient, artifact: str | None = None):
+def install_transpile(w: WorkspaceClient, artifact: str | None = None) -> None:
     """Install the Lakebridge transpilers"""
     with_user_agent_extra("cmd", "install-transpile")
     if artifact:
@@ -632,7 +638,7 @@ def install_transpile(w: WorkspaceClient, artifact: str | None = None):
 
 
 @lakebridge.command(is_unauthenticated=False)
-def configure_reconcile(w: WorkspaceClient):
+def configure_reconcile(w: WorkspaceClient) -> None:
     """Configure the Lakebridge reconciliation module"""
     with_user_agent_extra("cmd", "configure-reconcile")
     user = w.current_user
@@ -646,7 +652,7 @@ def configure_reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None):
+def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None) -> None:
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
