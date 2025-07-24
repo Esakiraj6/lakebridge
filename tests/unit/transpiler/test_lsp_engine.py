@@ -98,7 +98,7 @@ async def read_log(marker: str) -> str:
     for _ in range(1, 10):
         log = log_path.read_text("utf-8")
         if marker in log:
-            break
+            return log
         await asyncio.sleep(0.1)
     return log_path.read_text("utf-8")
 
