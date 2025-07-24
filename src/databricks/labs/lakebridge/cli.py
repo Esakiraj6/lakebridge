@@ -188,8 +188,6 @@ class _TranspileConfigChecker:
 
     _config: TranspileConfig
     """The workspace configuration for transpiling, updated from command-line arguments."""
-    # _engine: TranspileEngine | None
-    # """The transpiler engine to use for transpiling, lazily loaded based on the configuration."""
     _prompts: Prompts
     """Prompting system, for requesting configuration that hasn't been provided."""
     _source_dialect_override: str | None = None
