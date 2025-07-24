@@ -93,6 +93,7 @@ async def test_server_has_transpile_capability(lsp_engine, transpile_config):
 
 
 async def read_log(marker: str) -> str:
+    # TODO: Fix this; logs should not be generated amongst the resources in our source tree.
     log_path = Path(path_to_resource("lsp_transpiler", "test-lsp-server.log"))
     # need to give time to child process
     for _ in range(1, 10):
