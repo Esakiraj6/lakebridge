@@ -527,13 +527,13 @@ class WorkspaceInstaller:
         return config
 
     @classmethod
-    def install_bladebridge(cls, artifact: Path | None = None):
+    def install_bladebridge(cls, artifact: Path | None = None) -> None:
         local_name = "bladebridge"
         pypi_name = "databricks-bb-plugin"
         TranspilerInstaller.install_from_pypi(local_name, pypi_name, artifact)
 
     @classmethod
-    def install_morpheus(cls, artifact: Path | None = None):
+    def install_morpheus(cls, artifact: Path | None = None) -> None:
         if not cls.is_java_version_okay():
             logger.error(
                 "The morpheus transpiler requires Java 11 or above. Please install Java and re-run 'install-transpile'."
