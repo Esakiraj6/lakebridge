@@ -2,7 +2,7 @@ import datetime as dt
 import json
 import os
 import shutil
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from unittest.mock import create_autospec, patch
 
@@ -22,7 +22,7 @@ from databricks.labs.lakebridge.config import (
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
-from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerInstaller
+from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerInstaller, TranspilerRepository
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.blueprint.wheels import ProductInfo, WheelsV2
 from databricks.labs.lakebridge.reconcile.constants import ReconSourceType, ReconReportType
@@ -54,18 +54,6 @@ PATH_TO_TRANSPILER_CONFIG = "/some/path/to/config.yml"
 def ws_installer() -> Generator[Callable[..., WorkspaceInstaller], None, None]:
 
     class TestWorkspaceInstaller(WorkspaceInstaller):
-
-        # TODO the below 'install_xxx' methods currently fail
-        # (because the artifact is either missing or invalid)
-        # TODO remove this once they are available and healthy !!!
-        @classmethod
-        def install_bladebridge(cls, artifact: Path | None = None) -> None:
-            pass
-
-        @classmethod
-        def install_morpheus(cls, artifact: Path | None = None) -> None:
-            pass
-
         def _all_installed_dialects(self):
             return ALL_INSTALLED_DIALECTS_NO_LATER
 
@@ -1017,6 +1005,7 @@ def test_runs_upgrades_on_more_recent_version(
 def test_runs_and_stores_confirm_config_option(
     ws_installer: Callable[..., WorkspaceInstaller],
     ws: WorkspaceClient,
+    tmp_path: Path,
 ) -> None:
     prompts = MockPrompts(
         {
@@ -1045,6 +1034,14 @@ def test_runs_and_stores_confirm_config_option(
         workspace_installation=create_autospec(WorkspaceInstallation),
     )
 
+    class _TranspilerRepository(TranspilerRepository):
+        def __init__(self) -> None:
+            super().__init__(tmp_path / "labs")
+            self._transpilers_path = Path(path_to_resource("transpiler_configs"))
+
+        def transpilers_path(self) -> Path:
+            return self._transpilers_path
+
     workspace_installer = ws_installer(
         ctx.workspace_client,
         ctx.prompts,
@@ -1053,51 +1050,55 @@ def test_runs_and_stores_confirm_config_option(
         ctx.product_info,
         ctx.resource_configurator,
         ctx.workspace_installation,
+        transpiler_repository=_TranspilerRepository(),
     )
 
-    with (
-        patch(
-            "databricks.labs.lakebridge.install.TranspilerInstaller.transpilers_path",
-            return_value=Path(path_to_resource("transpiler_configs")),
-        ),
-    ):
+    config = workspace_installer.configure(module="transpile")
 
-        config = workspace_installer.configure(module="transpile")
+    expected_config = RemorphConfigs(
+        transpile=TranspileConfig(
+            transpiler_config_path=PATH_TO_TRANSPILER_CONFIG,
+            transpiler_options={"-experimental": True},
+            source_dialect="snowflake",
+            input_source="/tmp/queries/snow",
+            output_folder="/tmp/queries/databricks",
+            error_file_path="/tmp/queries/errors.log",
+            catalog_name="remorph_test",
+            schema_name="transpiler_test",
+            sdk_config={"warehouse_id": "w_id"},
+        )
+    )
+    assert config == expected_config
+    installation.assert_file_written(
+        "config.yml",
+        {
+            "transpiler_config_path": PATH_TO_TRANSPILER_CONFIG,
+            "transpiler_options": {'-experimental': True},
+            "catalog_name": "remorph_test",
+            "input_source": "/tmp/queries/snow",
+            "output_folder": "/tmp/queries/databricks",
+            "error_file_path": "/tmp/queries/errors.log",
+            "schema_name": "transpiler_test",
+            "sdk_config": {"warehouse_id": "w_id"},
+            "source_dialect": "snowflake",
+            "version": 3,
+        },
+    )
 
-        expected_config = RemorphConfigs(
-            transpile=TranspileConfig(
-                transpiler_config_path=PATH_TO_TRANSPILER_CONFIG,
-                transpiler_options={"-experimental": True},
-                source_dialect="snowflake",
-                input_source="/tmp/queries/snow",
-                output_folder="/tmp/queries/databricks",
-                error_file_path="/tmp/queries/errors.log",
-                catalog_name="remorph_test",
-                schema_name="transpiler_test",
-                sdk_config={"warehouse_id": "w_id"},
-            )
-        )
-        assert config == expected_config
-        installation.assert_file_written(
-            "config.yml",
-            {
-                "transpiler_config_path": PATH_TO_TRANSPILER_CONFIG,
-                "transpiler_options": {'-experimental': True},
-                "catalog_name": "remorph_test",
-                "input_source": "/tmp/queries/snow",
-                "output_folder": "/tmp/queries/databricks",
-                "error_file_path": "/tmp/queries/errors.log",
-                "schema_name": "transpiler_test",
-                "sdk_config": {"warehouse_id": "w_id"},
-                "source_dialect": "snowflake",
-                "version": 3,
-            },
-        )
+
+class _StubTranspilerRepository(TranspilerRepository):
+    def __init__(self, labs_path: Path, config_options: Sequence[LSPConfigOptionV1]) -> None:
+        super().__init__(labs_path)
+        self._config_options = config_options
+
+    def transpiler_config_options(self, transpiler_name: str, source_dialect: str) -> list[LSPConfigOptionV1]:
+        return list(self._config_options)
 
 
 def test_runs_and_stores_force_config_option(
     ws_installer: Callable[..., WorkspaceInstaller],
     ws: WorkspaceClient,
+    tmp_path: Path,
 ) -> None:
     prompts = MockPrompts(
         {
@@ -1125,6 +1126,10 @@ def test_runs_and_stores_force_config_option(
         workspace_installation=create_autospec(WorkspaceInstallation),
     )
 
+    transpiler_repository = _StubTranspilerRepository(
+        tmp_path / "labs", config_options=(LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.FORCE, default=1254),)
+    )
+
     workspace_installer = ws_installer(
         ctx.workspace_client,
         ctx.prompts,
@@ -1133,11 +1138,8 @@ def test_runs_and_stores_force_config_option(
         ctx.product_info,
         ctx.resource_configurator,
         ctx.workspace_installation,
+        transpiler_repository=transpiler_repository,
     )
-
-    TranspilerInstaller.transpiler_config_options = lambda transpiler_name, source_dialect: [  # type: ignore[method-assign]
-        LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.FORCE, default=1254)
-    ]
 
     config = workspace_installer.configure(module="transpile")
 
@@ -1175,6 +1177,7 @@ def test_runs_and_stores_force_config_option(
 def test_runs_and_stores_question_config_option(
     ws_installer: Callable[..., WorkspaceInstaller],
     ws: WorkspaceClient,
+    tmp_path: Path,
 ) -> None:
     prompts = MockPrompts(
         {
@@ -1203,6 +1206,11 @@ def test_runs_and_stores_question_config_option(
         workspace_installation=create_autospec(WorkspaceInstallation),
     )
 
+    transpiler_repository = _StubTranspilerRepository(
+        tmp_path / "labs",
+        config_options=(LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.QUESTION, prompt="Max number of heaps:"),),
+    )
+
     workspace_installer = ws_installer(
         ctx.workspace_client,
         ctx.prompts,
@@ -1211,11 +1219,8 @@ def test_runs_and_stores_question_config_option(
         ctx.product_info,
         ctx.resource_configurator,
         ctx.workspace_installation,
+        transpiler_repository=transpiler_repository,
     )
-
-    TranspilerInstaller.transpiler_config_options = lambda transpiler_name, source_dialect: [  # type: ignore[method-assign]
-        LSPConfigOptionV1(flag="-XX", method=LSPPromptMethod.QUESTION, prompt="Max number of heaps:")
-    ]
 
     config = workspace_installer.configure(module="transpile")
 
@@ -1253,6 +1258,7 @@ def test_runs_and_stores_question_config_option(
 def test_runs_and_stores_choice_config_option(
     ws_installer: Callable[..., WorkspaceInstaller],
     ws: WorkspaceClient,
+    tmp_path: Path,
 ) -> None:
     prompts = MockPrompts(
         {
@@ -1281,6 +1287,17 @@ def test_runs_and_stores_choice_config_option(
         workspace_installation=create_autospec(WorkspaceInstallation),
     )
 
+    transpiler_repository = _StubTranspilerRepository(
+        tmp_path / "labs",
+        config_options=(
+            LSPConfigOptionV1(
+                flag="-currency",
+                method=LSPPromptMethod.CHOICE,
+                prompt="Select currency:",
+                choices=["CHF", "EUR", "GBP", "USD"],
+            ),
+        ),
+    )
     workspace_installer = ws_installer(
         ctx.workspace_client,
         ctx.prompts,
@@ -1289,16 +1306,8 @@ def test_runs_and_stores_choice_config_option(
         ctx.product_info,
         ctx.resource_configurator,
         ctx.workspace_installation,
+        transpiler_repository=transpiler_repository,
     )
-
-    TranspilerInstaller.transpiler_config_options = lambda transpiler_name, source_dialect: [  # type: ignore[method-assign]
-        LSPConfigOptionV1(
-            flag="-currency",
-            method=LSPPromptMethod.CHOICE,
-            prompt="Select currency:",
-            choices=["CHF", "EUR", "GBP", "USD"],
-        )
-    ]
 
     config = workspace_installer.configure(module="transpile")
 

@@ -1,15 +1,12 @@
-import shutil
-import sys
 from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest.mock import patch
 from email import policy
 from email.message import Message
 from email.parser import Parser as EmailParser
 
 from databricks.labs.lakebridge.config import TranspileConfig, TranspileResult
-from databricks.labs.lakebridge.install import TranspilerInstaller
+from databricks.labs.lakebridge.install import TranspilerRepository, WheelInstaller, MavenInstaller
 from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
+from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 
 def process_email_content(msg: str) -> str | None:
@@ -35,128 +32,154 @@ def format_transpiled(sql: str) -> str:
 
 
 async def run_lsp_operations(
-    lsp_engine: LSPEngine,
+    engine: TranspileEngine,
     transpile_config: TranspileConfig,
-    input_source: str,
+    input_source: Path,
     sql_code: str,
 ) -> TranspileResult:
     """Helper function to run LSP operations."""
-    await lsp_engine.initialize(transpile_config)
+    await engine.initialize(transpile_config)
     dialect = transpile_config.source_dialect
     assert dialect is not None
-    input_file = Path(input_source) / "some_query.sql"
-    result = await lsp_engine.transpile(dialect, "databricks", sql_code, input_file)
-    await lsp_engine.shutdown()
+    input_file = input_source / "some_query.sql"
+    result = await engine.transpile(dialect, "databricks", sql_code, input_file)
+    await engine.shutdown()
     return result
 
 
-async def test_installs_and_runs_local_bladebridge(bladebridge_artifact: Path) -> None:
-    with TemporaryDirectory() as tmpdir:
-        with patch.object(TranspilerInstaller, "labs_path", return_value=Path(tmpdir)):
-            await _install_and_run_local_bladebridge(bladebridge_artifact)
+# TODO: Remove this test? We really want to test the latest published version.
+async def test_installs_and_runs_local_bladebridge(bladebridge_artifact: Path, tmp_path: Path) -> None:
+    labs_path = tmp_path / "labs"
+    input_source = labs_path / "input_source"
+    output_folder = labs_path / "output_folder"
+    transpiler_repository = TranspilerRepository(labs_path)
+    await _install_and_run_local_bladebridge(transpiler_repository, bladebridge_artifact, input_source, output_folder)
 
 
-async def _install_and_run_local_bladebridge(bladebridge_artifact: Path) -> None:
-    bladebridge = TranspilerInstaller.transpilers_path() / "bladebridge"
-    assert not bladebridge.exists()
-    TranspilerInstaller.install_from_pypi("bladebridge", "databricks-bb-plugin", bladebridge_artifact)
-    config_path = bladebridge / "lib" / "config.yml"
-    assert config_path.exists()
-    version_path = bladebridge / "state" / "version.json"
-    assert version_path.exists()
-    lsp_engine = LSPEngine.from_config_path(config_path)
-    with TemporaryDirectory() as input_source:
-        with TemporaryDirectory() as output_folder:
-            transpile_config = TranspileConfig(
-                transpiler_config_path=str(config_path),
-                source_dialect="oracle",
-                input_source=input_source,
-                output_folder=output_folder,
-                sdk_config={"cluster_id": "test_cluster"},
-                skip_validation=False,
-                catalog_name="catalog",
-                schema_name="schema",
-            )
+async def _install_and_run_local_bladebridge(
+    transpiler_repository: TranspilerRepository,
+    bladebridge_artifact: Path,
+    input_source: Path,
+    output_folder: Path,
+) -> None:
+    WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin", bladebridge_artifact).install()
+    config_path = transpiler_repository.transpiler_config_path("Bladebridge")
+    lsp_engine = TranspileEngine.load_engine(config_path)
+    transpile_config = TranspileConfig(
+        transpiler_config_path=str(config_path),
+        source_dialect="oracle",
+        input_source=str(input_source),
+        output_folder=str(output_folder),
+        sdk_config={"cluster_id": "test_cluster"},
+        skip_validation=False,
+        catalog_name="catalog",
+        schema_name="schema",
+    )
 
-            sql_code = "select * from employees"
-            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
-            transpiled = process_email_content(result.transpiled_code)
-            assert transpiled == sql_code
+    sql_code = "select * from employees"
+    result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
+    transpiled = process_email_content(result.transpiled_code)
+    assert transpiled == sql_code
 
 
 async def test_installs_and_runs_pypi_bladebridge(tmp_path: Path) -> None:
-    if sys.platform == "win32":
-        await _install_and_run_pypi_bladebridge()
-    else:
-        labs_path = tmp_path / "labs"
-        with patch.object(TranspilerInstaller, "labs_path", return_value=labs_path):
-            await _install_and_run_pypi_bladebridge()
+    labs_path = tmp_path / "labs"
+    input_source = labs_path / "input_source"
+    output_folder = labs_path / "output_folder"
+    transpiler_repository = TranspilerRepository(labs_path)
+    await _install_and_run_pypi_bladebridge(transpiler_repository, input_source, output_folder)
 
 
-async def _install_and_run_pypi_bladebridge() -> None:
-    bladebridge = TranspilerInstaller.transpilers_path() / "bladebridge"
-    if sys.platform == "win32" and bladebridge.exists():
-        shutil.rmtree(bladebridge)
-    assert not bladebridge.exists()
-    TranspilerInstaller.install_from_pypi("bladebridge", "databricks-bb-plugin")
-    config_path = bladebridge / "lib" / "config.yml"
-    assert config_path.exists()
-    version_path = bladebridge / "state" / "version.json"
-    assert version_path.exists()
-    lsp_engine = LSPEngine.from_config_path(config_path)
-    with TemporaryDirectory() as input_source:
-        with TemporaryDirectory() as output_folder:
-            transpile_config = TranspileConfig(
-                transpiler_config_path=str(config_path),
-                source_dialect="oracle",
-                input_source=input_source,
-                output_folder=output_folder,
-                sdk_config={"cluster_id": "test_cluster"},
-                skip_validation=False,
-                catalog_name="catalog",
-                schema_name="schema",
-            )
-
-            sql_code = "select * from employees"
-            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
-            transpiled = process_email_content(result.transpiled_code)
-            assert transpiled == sql_code
-
-
-async def test_installs_and_runs_local_morpheus(morpheus_artifact: Path) -> None:
-    with TemporaryDirectory() as tmpdir:
-        with patch.object(TranspilerInstaller, "labs_path", return_value=Path(tmpdir)):
-            await _install_and_run_local_morpheus(morpheus_artifact)
-
-
-async def _install_and_run_local_morpheus(morpheus_artifact: Path) -> None:
-    morpheus = TranspilerInstaller.transpilers_path() / "morpheus"
-    assert not morpheus.exists()
-    TranspilerInstaller.install_from_maven(
-        "morpheus", "com.databricks.labs", "databricks-morph-plugin", morpheus_artifact
+async def _install_and_run_pypi_bladebridge(
+    transpiler_repository: TranspilerRepository,
+    input_source: Path,
+    output_folder: Path,
+) -> None:
+    WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin").install()
+    config_path = transpiler_repository.transpiler_config_path("Bladebridge")
+    engine = TranspileEngine.load_engine(config_path)
+    transpile_config = TranspileConfig(
+        transpiler_config_path=str(config_path),
+        source_dialect="oracle",
+        input_source=str(input_source),
+        output_folder=str(output_folder),
+        sdk_config={"cluster_id": "test_cluster"},
+        skip_validation=False,
+        catalog_name="catalog",
+        schema_name="schema",
     )
-    morpheus = TranspilerInstaller.transpilers_path() / "morpheus"
-    config_path = morpheus / "lib" / "config.yml"
-    assert config_path.exists()
-    main_path = morpheus / "lib" / "databricks-morph-plugin.jar"
-    assert main_path.exists()
-    version_path = morpheus / "state" / "version.json"
-    assert version_path.exists()
-    lsp_engine = LSPEngine.from_config_path(config_path)
-    with TemporaryDirectory() as input_source:
-        with TemporaryDirectory() as output_folder:
-            transpile_config = TranspileConfig(
-                transpiler_config_path=str(config_path),
-                source_dialect="snowflake",
-                input_source=input_source,
-                output_folder=output_folder,
-                sdk_config={"cluster_id": "test_cluster"},
-                skip_validation=False,
-                catalog_name="catalog",
-                schema_name="schema",
-            )
 
-            sql_code = "select * from employees;"
-            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
-            transpiled = format_transpiled(result.transpiled_code)
-            assert transpiled == sql_code
+    sql_code = "select * from employees"
+    result = await run_lsp_operations(engine, transpile_config, input_source, sql_code)
+    transpiled = process_email_content(result.transpiled_code)
+    assert transpiled == sql_code
+
+
+# TODO: Remove this test? We really want to test the latest published version.
+async def test_installs_and_runs_local_morpheus(morpheus_artifact: Path, tmp_path: Path) -> None:
+    labs_path = tmp_path / "labs"
+    input_source = labs_path / "input_source"
+    output_folder = labs_path / "output_folder"
+    transpiler_repository = TranspilerRepository(labs_path)
+    await _install_and_run_local_morpheus(transpiler_repository, morpheus_artifact, input_source, output_folder)
+
+
+async def _install_and_run_local_morpheus(
+    transpiler_repository: TranspilerRepository,
+    morpheus_artifact: Path,
+    input_source: Path,
+    output_folder: Path,
+) -> None:
+    MavenInstaller(
+        transpiler_repository, "morpheus", "com.databricks.labs", "databricks-morph-plugin", morpheus_artifact
+    ).install()
+    config_path = transpiler_repository.transpiler_config_path("Morpheus")
+    engine = LSPEngine.from_config_path(config_path)
+    transpile_config = TranspileConfig(
+        transpiler_config_path=str(config_path),
+        source_dialect="snowflake",
+        input_source=str(input_source),
+        output_folder=str(output_folder),
+        sdk_config={"cluster_id": "test_cluster"},
+        skip_validation=False,
+        catalog_name="catalog",
+        schema_name="schema",
+    )
+
+    sql_code = "select * from employees;"
+    result = await run_lsp_operations(engine, transpile_config, input_source, sql_code)
+    transpiled = format_transpiled(result.transpiled_code)
+    assert transpiled == sql_code
+
+
+async def test_installs_and_runs_maven_morpheus(tmp_path: Path) -> None:
+    labs_path = tmp_path / "labs"
+    input_source = labs_path / "input_source"
+    output_folder = labs_path / "output_folder"
+    transpiler_repository = TranspilerRepository(labs_path)
+    await _install_and_run_maven_morpheus(transpiler_repository, input_source, output_folder)
+
+
+async def _install_and_run_maven_morpheus(
+    transpiler_repository: TranspilerRepository,
+    input_source: Path,
+    output_folder: Path,
+) -> None:
+    MavenInstaller(transpiler_repository, "morpheus", "com.databricks.labs", "databricks-morph-plugin").install()
+    config_path = transpiler_repository.transpiler_config_path("Morpheus")
+    engine = LSPEngine.from_config_path(config_path)
+    transpile_config = TranspileConfig(
+        transpiler_config_path=str(config_path),
+        source_dialect="snowflake",
+        input_source=str(input_source),
+        output_folder=str(output_folder),
+        sdk_config={"cluster_id": "test_cluster"},
+        skip_validation=False,
+        catalog_name="catalog",
+        schema_name="schema",
+    )
+
+    sql_code = "select * from employees;"
+    result = await run_lsp_operations(engine, transpile_config, input_source, sql_code)
+    transpiled = format_transpiled(result.transpiled_code)
+    assert transpiled == sql_code
