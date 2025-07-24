@@ -123,9 +123,11 @@ class TranspilerInstaller(abc.ABC):
 
     @classmethod
     def transpiler_config_path(cls, transpiler_name) -> Path:
-        config = cls.all_transpiler_configs().get(transpiler_name, None)
-        if not config:
-            raise ValueError(f"No such transpiler: {transpiler_name}")
+        # Note: Can't just go straight to the directory: the transpiler names don't exactly match the directory names.
+        try:
+            config = next(c for c in cls._all_transpiler_configs() if c.name == transpiler_name)
+        except StopIteration as e:
+            raise ValueError(f"No such transpiler: {transpiler_name}") from e
         return config.path
 
     @classmethod
