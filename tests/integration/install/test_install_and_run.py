@@ -42,7 +42,8 @@ async def run_lsp_operations(
 ) -> TranspileResult:
     """Helper function to run LSP operations."""
     await lsp_engine.initialize(transpile_config)
-    dialect = transpile_config.source_dialect or ""  # Ensure it's a string
+    dialect = transpile_config.source_dialect
+    assert dialect is not None
     input_file = Path(input_source) / "some_query.sql"
     result = await lsp_engine.transpile(dialect, "databricks", sql_code, input_file)
     await lsp_engine.shutdown()
