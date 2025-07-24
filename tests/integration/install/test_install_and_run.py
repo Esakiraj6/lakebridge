@@ -1,4 +1,3 @@
-import asyncio
 import shutil
 import sys
 from pathlib import Path
@@ -35,13 +34,13 @@ def format_transpiled(sql: str) -> str:
     return sql
 
 
-async def run_lsp_operations_sync(
+async def run_lsp_operations(
     lsp_engine: LSPEngine,
     transpile_config: TranspileConfig,
     input_source: str,
     sql_code: str,
 ) -> TranspileResult:
-    """Helper function to run LSP operations synchronously"""
+    """Helper function to run LSP operations."""
     await lsp_engine.initialize(transpile_config)
     dialect = transpile_config.source_dialect or ""  # Ensure it's a string
     input_file = Path(input_source) / "some_query.sql"
@@ -50,13 +49,13 @@ async def run_lsp_operations_sync(
     return result
 
 
-def test_installs_and_runs_local_bladebridge(bladebridge_artifact: Path) -> None:
+async def test_installs_and_runs_local_bladebridge(bladebridge_artifact: Path) -> None:
     with TemporaryDirectory() as tmpdir:
         with patch.object(TranspilerInstaller, "labs_path", return_value=Path(tmpdir)):
-            _install_and_run_local_bladebridge(bladebridge_artifact)
+            await _install_and_run_local_bladebridge(bladebridge_artifact)
 
 
-def _install_and_run_local_bladebridge(bladebridge_artifact: Path) -> None:
+async def _install_and_run_local_bladebridge(bladebridge_artifact: Path) -> None:
     bladebridge = TranspilerInstaller.transpilers_path() / "bladebridge"
     assert not bladebridge.exists()
     TranspilerInstaller.install_from_pypi("bladebridge", "databricks-bb-plugin", bladebridge_artifact)
@@ -79,21 +78,21 @@ def _install_and_run_local_bladebridge(bladebridge_artifact: Path) -> None:
             )
 
             sql_code = "select * from employees"
-            result = asyncio.run(run_lsp_operations_sync(lsp_engine, transpile_config, input_source, sql_code))
+            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
             transpiled = process_email_content(result.transpiled_code)
             assert transpiled == sql_code
 
 
-def test_installs_and_runs_pypi_bladebridge(tmp_path: Path) -> None:
+async def test_installs_and_runs_pypi_bladebridge(tmp_path: Path) -> None:
     if sys.platform == "win32":
-        _install_and_run_pypi_bladebridge()
+        await _install_and_run_pypi_bladebridge()
     else:
         labs_path = tmp_path / "labs"
         with patch.object(TranspilerInstaller, "labs_path", return_value=labs_path):
-            _install_and_run_pypi_bladebridge()
+            await _install_and_run_pypi_bladebridge()
 
 
-def _install_and_run_pypi_bladebridge() -> None:
+async def _install_and_run_pypi_bladebridge() -> None:
     bladebridge = TranspilerInstaller.transpilers_path() / "bladebridge"
     if sys.platform == "win32" and bladebridge.exists():
         shutil.rmtree(bladebridge)
@@ -118,18 +117,18 @@ def _install_and_run_pypi_bladebridge() -> None:
             )
 
             sql_code = "select * from employees"
-            result = asyncio.run(run_lsp_operations_sync(lsp_engine, transpile_config, input_source, sql_code))
+            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
             transpiled = process_email_content(result.transpiled_code)
             assert transpiled == sql_code
 
 
-def test_installs_and_runs_local_morpheus(morpheus_artifact):
+async def test_installs_and_runs_local_morpheus(morpheus_artifact):
     with TemporaryDirectory() as tmpdir:
         with patch.object(TranspilerInstaller, "labs_path", return_value=Path(tmpdir)):
-            _install_and_run_local_morpheus(morpheus_artifact)
+            await _install_and_run_local_morpheus(morpheus_artifact)
 
 
-def _install_and_run_local_morpheus(morpheus_artifact):
+async def _install_and_run_local_morpheus(morpheus_artifact):
     morpheus = TranspilerInstaller.transpilers_path() / "morpheus"
     assert not morpheus.exists()
     TranspilerInstaller.install_from_maven(
@@ -157,6 +156,6 @@ def _install_and_run_local_morpheus(morpheus_artifact):
             )
 
             sql_code = "select * from employees;"
-            result = asyncio.run(run_lsp_operations_sync(lsp_engine, transpile_config, input_source, sql_code))
+            result = await run_lsp_operations(lsp_engine, transpile_config, input_source, sql_code)
             transpiled = format_transpiled(result.transpiled_code)
             assert transpiled == sql_code
