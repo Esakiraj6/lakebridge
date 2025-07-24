@@ -20,6 +20,9 @@ from databricks.labs.lakebridge.transpiler.transpile_status import TranspileErro
 from tests.unit.conftest import path_to_resource
 
 
+# TODO: Arguably a form of integration test, as it round-trips with a real LSP server.
+
+
 async def test_initializes_lsp_server(lsp_engine, transpile_config):
     assert not lsp_engine.is_alive
     await lsp_engine.initialize(transpile_config)
