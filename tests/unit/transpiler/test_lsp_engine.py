@@ -96,10 +96,10 @@ async def read_log(marker: str) -> str:
     log_path = Path(path_to_resource("lsp_transpiler", "test-lsp-server.log"))
     # need to give time to child process
     for _ in range(1, 10):
-        await asyncio.sleep(0.1)
         log = log_path.read_text("utf-8")
         if marker in log:
             break
+        await asyncio.sleep(0.1)
     return log_path.read_text("utf-8")
 
 
