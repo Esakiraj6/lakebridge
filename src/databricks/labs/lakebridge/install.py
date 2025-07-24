@@ -123,13 +123,15 @@ class TranspilerInstaller(abc.ABC):
 
     @classmethod
     def transpiler_config_path(cls, transpiler_name) -> Path:
-        config = cls.all_transpiler_configs().get(transpiler_name, None)
-        if not config:
-            raise ValueError(f"No such transpiler: {transpiler_name}")
+        # Note: Can't just go straight to the directory: the transpiler names don't exactly match the directory names.
+        try:
+            config = next(c for c in cls._all_transpiler_configs() if c.name == transpiler_name)
+        except StopIteration as e:
+            raise ValueError(f"No such transpiler: {transpiler_name}") from e
         return config.path
 
     @classmethod
-    def transpiler_config_options(cls, transpiler_name, source_dialect) -> list[LSPConfigOptionV1]:
+    def transpiler_config_options(cls, transpiler_name: str, source_dialect: str) -> list[LSPConfigOptionV1]:
         config = cls.all_transpiler_configs().get(transpiler_name, None)
         if not config:
             return []  # gracefully returns an empty list, since this can only happen during testing
@@ -208,14 +210,12 @@ class WheelInstaller(TranspilerInstaller):
 
     def _install_latest_version(self, version: str) -> Path | None:
         logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        # use type(self) to workaround a mock bug on class methods
-        self._product_path = type(self).transpilers_path() / self._product_name
+        self._product_path = self.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if self._product_path.exists():
             os.rename(self._product_path, backup_path)
-        self._product_path.mkdir(parents=True, exist_ok=True)
         self._install_path = self._product_path / "lib"
-        self._install_path.mkdir(exist_ok=True)
+        self._install_path.mkdir(parents=True, exist_ok=True)
         try:
             result = self._unsafe_install_latest_version(version)
             logger.info(f"Successfully installed {self._pypi_name} v{version}")
