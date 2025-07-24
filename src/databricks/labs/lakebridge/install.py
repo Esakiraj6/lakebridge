@@ -129,7 +129,7 @@ class TranspilerInstaller(abc.ABC):
         return config.path
 
     @classmethod
-    def transpiler_config_options(cls, transpiler_name, source_dialect) -> list[LSPConfigOptionV1]:
+    def transpiler_config_options(cls, transpiler_name: str, source_dialect: str) -> list[LSPConfigOptionV1]:
         config = cls.all_transpiler_configs().get(transpiler_name, None)
         if not config:
             return []  # gracefully returns an empty list, since this can only happen during testing
@@ -527,13 +527,13 @@ class WorkspaceInstaller:
         return config
 
     @classmethod
-    def install_bladebridge(cls, artifact: Path | None = None):
+    def install_bladebridge(cls, artifact: Path | None = None) -> None:
         local_name = "bladebridge"
         pypi_name = "databricks-bb-plugin"
         TranspilerInstaller.install_from_pypi(local_name, pypi_name, artifact)
 
     @classmethod
-    def install_morpheus(cls, artifact: Path | None = None):
+    def install_morpheus(cls, artifact: Path | None = None) -> None:
         if not cls.is_java_version_okay():
             logger.error(
                 "The morpheus transpiler requires Java 11 or above. Please install Java and re-run 'install-transpile'."
