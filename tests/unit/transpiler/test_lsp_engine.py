@@ -4,7 +4,6 @@ import logging
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from time import sleep
 import pytest
 
 from lsprotocol.types import TextEdit, Range, Position
@@ -24,7 +23,6 @@ from tests.unit.conftest import path_to_resource
 async def test_initializes_lsp_server(lsp_engine, transpile_config):
     assert not lsp_engine.is_alive
     await lsp_engine.initialize(transpile_config)
-    sleep(3)
     assert lsp_engine.is_alive
 
 
