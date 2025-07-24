@@ -123,13 +123,13 @@ async def _install_and_run_pypi_bladebridge() -> None:
             assert transpiled == sql_code
 
 
-async def test_installs_and_runs_local_morpheus(morpheus_artifact):
+async def test_installs_and_runs_local_morpheus(morpheus_artifact: Path) -> None:
     with TemporaryDirectory() as tmpdir:
         with patch.object(TranspilerInstaller, "labs_path", return_value=Path(tmpdir)):
             await _install_and_run_local_morpheus(morpheus_artifact)
 
 
-async def _install_and_run_local_morpheus(morpheus_artifact):
+async def _install_and_run_local_morpheus(morpheus_artifact: Path) -> None:
     morpheus = TranspilerInstaller.transpilers_path() / "morpheus"
     assert not morpheus.exists()
     TranspilerInstaller.install_from_maven(
