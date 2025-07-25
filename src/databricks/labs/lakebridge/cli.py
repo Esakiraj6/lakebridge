@@ -41,6 +41,7 @@ from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.labs.lakebridge.transpiler.sqlglot.sqlglot_engine import SqlglotEngine
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
+from databricks.labs.lakebridge.transpiler.transpile_engine_factory import TranspileEngineFactory
 
 from databricks.labs.lakebridge.transpiler.transpile_status import ErrorSeverity
 
@@ -358,7 +359,7 @@ class _TranspileConfigChecker:
         transpiler_config_path = self._transpiler_repository.transpiler_config_path(transpiler_name)
         logger.info(f"Lakebridge will use the {transpiler_name} transpiler.")
         self._config = dataclasses.replace(self._config, transpiler_config_path=str(transpiler_config_path))
-        return TranspileEngine.load_engine(transpiler_config_path)
+        return TranspileEngineFactory.build_transpile_engine(transpiler_config_path)
 
     def _configure_source_dialect(
         self, source_dialect: str, engine: TranspileEngine | None, msg_prefix: str
@@ -433,7 +434,7 @@ class _TranspileConfigChecker:
                 f"Invalid transpiler path configured, path does not exist: {transpiler_config_path}",
             )
             path = Path(transpiler_config_path)
-            engine = TranspileEngine.load_engine(path)
+            engine = TranspileEngineFactory.build_transpile_engine(path)
         else:
             engine = None
         del transpiler_config_path
