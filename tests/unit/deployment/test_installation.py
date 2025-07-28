@@ -12,7 +12,7 @@ from databricks.sdk.service import iam
 
 from databricks.labs.lakebridge.config import (
     TranspileConfig,
-    RemorphConfigs,
+    LakebridgeConfigs,
     ReconcileConfig,
     DatabaseConfig,
     ReconcileMetadataConfig,
@@ -65,7 +65,7 @@ def test_install_all(ws):
             volume="reconcile_volume6",
         ),
     )
-    config = RemorphConfigs(transpile=transpile_config, reconcile=reconcile_config)
+    config = LakebridgeConfigs(transpile=transpile_config, reconcile=reconcile_config)
     installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, product_info, upgrades)
     installation.install(config)
 
@@ -86,7 +86,7 @@ def test_no_recon_component_installation(ws):
         catalog_name="remorph7",
         schema_name="transpiler7",
     )
-    config = RemorphConfigs(transpile=transpile_config)
+    config = LakebridgeConfigs(transpile=transpile_config)
     installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, product_info, upgrades)
     installation.install(config)
     recon_deployment.install.assert_not_called()
@@ -114,7 +114,7 @@ def test_recon_component_installation(ws):
             volume="reconcile_volume8",
         ),
     )
-    config = RemorphConfigs(reconcile=reconcile_config)
+    config = LakebridgeConfigs(reconcile=reconcile_config)
     installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, product_info, upgrades)
     installation.install(config)
     recon_deployment.install.assert_called()
@@ -132,7 +132,7 @@ def test_negative_uninstall_confirmation(ws):
     upgrades = create_autospec(Upgrades)
 
     ws_installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, wheels, upgrades)
-    config = RemorphConfigs()
+    config = LakebridgeConfigs()
     ws_installation.uninstall(config)
     installation.remove.assert_not_called()
 
@@ -151,7 +151,7 @@ def test_missing_installation(ws):
     upgrades = create_autospec(Upgrades)
 
     ws_installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, wheels, upgrades)
-    config = RemorphConfigs()
+    config = LakebridgeConfigs()
     ws_installation.uninstall(config)
     installation.remove.assert_not_called()
 
@@ -190,7 +190,7 @@ def test_uninstall_configs_exist(ws):
             volume="reconcile_volume1",
         ),
     )
-    config = RemorphConfigs(transpile=transpile_config, reconcile=reconcile_config)
+    config = LakebridgeConfigs(transpile=transpile_config, reconcile=reconcile_config)
     installation = MockInstallation({})
     recon_deployment = create_autospec(ReconDeployment)
     wheels = create_autospec(WheelsV2)
@@ -214,7 +214,7 @@ def test_uninstall_configs_missing(ws):
     upgrades = create_autospec(Upgrades)
 
     ws_installation = WorkspaceInstallation(ws, prompts, installation, recon_deployment, wheels, upgrades)
-    config = RemorphConfigs()
+    config = LakebridgeConfigs()
     ws_installation.uninstall(config)
     recon_deployment.uninstall.assert_not_called()
     installation.assert_removed()

@@ -185,6 +185,6 @@ class ReconcileConfig:
 
 
 @dataclass
-class RemorphConfigs:
+class LakebridgeConfigs:
     transpile: TranspileConfig | None = None
     reconcile: ReconcileConfig | None = None
