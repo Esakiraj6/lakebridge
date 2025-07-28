@@ -17,7 +17,7 @@ def test_gets_installed_remorph_version(patched_transpiler_installer):
 
 def test_gets_maven_artifact_version() -> None:
     version = MavenInstaller.get_current_maven_artifact_version("com.databricks", "databricks-connect")
-    assert version
+    assert version is not None
     check_valid_version(version)
 
 
@@ -34,6 +34,7 @@ def test_downloads_from_maven():
 
 def test_gets_pypi_artifact_version():
     version = WheelInstaller.get_latest_artifact_version_from_pypi("databricks-labs-remorph")
+    assert version is not None
     check_valid_version(version)
 
 
