@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 from unittest.mock import patch
@@ -6,12 +5,6 @@ from unittest.mock import patch
 import pytest
 
 from databricks.labs.lakebridge.install import TranspilerInstaller, MavenInstaller, WorkspaceInstaller, WheelInstaller
-
-
-@pytest.mark.skipif(os.environ.get("CI", "false") == "true", reason="Skipping in CI since we have no installed product")
-def test_gets_installed_remorph_version(patched_transpiler_installer):
-    version = patched_transpiler_installer.get_installed_version("remorph", False)
-    check_valid_version(version)
 
 
 def test_gets_maven_artifact_version() -> None:
