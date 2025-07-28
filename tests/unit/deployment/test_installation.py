@@ -123,7 +123,7 @@ def test_recon_component_installation(ws):
 def test_negative_uninstall_confirmation(ws):
     prompts = MockPrompts(
         {
-            r"Do you want to uninstall Remorph .*": "no",
+            r"Do you want to uninstall Lakebridge .*": "no",
         }
     )
     installation = create_autospec(Installation)
@@ -140,7 +140,7 @@ def test_negative_uninstall_confirmation(ws):
 def test_missing_installation(ws):
     prompts = MockPrompts(
         {
-            r"Do you want to uninstall Remorph .*": "yes",
+            r"Do you want to uninstall Lakebridge .*": "yes",
         }
     )
     installation = create_autospec(Installation)
@@ -159,7 +159,7 @@ def test_missing_installation(ws):
 def test_uninstall_configs_exist(ws):
     prompts = MockPrompts(
         {
-            r"Do you want to uninstall Remorph .*": "yes",
+            r"Do you want to uninstall Lakebridge .*": "yes",
         }
     )
 
@@ -205,7 +205,7 @@ def test_uninstall_configs_exist(ws):
 def test_uninstall_configs_missing(ws):
     prompts = MockPrompts(
         {
-            r"Do you want to uninstall Remorph .*": "yes",
+            r"Do you want to uninstall Lakebridge .*": "yes",
         }
     )
     installation = MockInstallation()
