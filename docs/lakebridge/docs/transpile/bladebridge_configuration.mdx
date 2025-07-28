@@ -189,7 +189,7 @@ Example (removing TRANSLATE call and leaving args):
 
 ### inherit_from
 
-In real-world scenarios, it is often necessary to inherit rules or settings from shared configuration files into more specific ones. To support this, you can use the inherit_from directive, which allows a configuration file to reference a base or parent file. This enables layered rule definitions and promotes reuse and consistency across configurations.m
+In real-world scenarios, it is often necessary to inherit rules or settings from shared configuration files into more specific ones. To support this, you can use the inherit_from directive, which allows a configuration file to reference a base or parent file. This enables layered rule definitions and promotes reuse and consistency across configurations.
 
 
 `inherit_from` is an array pointing to JSON filenames that the current file inherits from. Multiple file inheritances are allowed. If the full path is supplied with a forward slash, then the converter will try to read the file specified with the full path. Otherwise, the converter will look for the file in the same folder as the current JSON file. 
