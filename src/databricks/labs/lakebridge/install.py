@@ -64,6 +64,7 @@ class TranspilerRepository:
         return self._labs_path / "remorph-transpilers"
 
     def get_installed_version(self, product_name: str) -> str | None:
+        # Warning: product_name here (eg. 'morpheus') and transpiler_name elsewhere (eg. Morpheus) are not the same!
         product_path = self.transpilers_path() / product_name
         current_version_path = product_path / "state" / "version.json"
         if not current_version_path.exists():
