@@ -34,7 +34,7 @@ Please read the subsequent sections of this document to learn how to create and 
 
 ## Basic Converter Rules
 
-When it comes to converting individual SQL code snippets or ETL expressions, BladeBridge uses basic set of rules to trap certain source patterns and produce converted output.
+When it comes to converting individual SQL code snippets or ETL expressions, BladeBridge uses basic set of rules to capture certain source patterns and produce converted output.
 The three main types of syntax manipulation rules are:
 - line_subst
 - block_subst
@@ -253,14 +253,6 @@ The external subroutines are defined in a file or sets of files outside of the c
 "CUSTOM_CONVERTER_MODULES" : ["my_handlers.pl", "globals.pl"]
 ```
 
-A good practice is to separate the configuration instructions that deal with “ornamentation” from the SQL dialect conversion instructions and have the former inherit from the latter. Example:
-Generic level file: general_sql_specs.json
-
-SQL Conversion level file: oracle2snowflake.json
-
-Procedural flow instructions file with callback function references: oracle2snowflake_javascript_procs.json
-
-The reason for such separation is that we can have a layer of instructions dealing specifically with SQL language conversion, and another layer dealing with the syntax of procedures to be generated.
 
 The Callback mechanism uses the instruction “fragment_handling” in the configuration file, which tells the converter how to dispatch the subroutine calls based on the category of a statement:
 
