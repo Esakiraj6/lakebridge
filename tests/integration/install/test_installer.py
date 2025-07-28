@@ -21,15 +21,14 @@ def test_gets_maven_artifact_version() -> None:
     check_valid_version(version)
 
 
-def test_downloads_from_maven() -> None:
-    with TemporaryDirectory() as parent:
-        path = Path(parent) / "pom.xml"
-        success = MavenInstaller.download_artifact_from_maven(
-            "com.databricks", "databricks-connect", "16.0.0", path, extension="pom"
-        )
-        assert success
-        assert path.exists()
-        assert path.stat().st_size == 5_684
+def test_downloads_from_maven(tmp_path: Path) -> None:
+    pom_path = tmp_path / "pom.xml"
+    success = MavenInstaller.download_artifact_from_maven(
+        "com.databricks", "databricks-connect", "16.0.0", pom_path, extension="pom"
+    )
+    assert success
+    assert pom_path.exists()
+    assert pom_path.stat().st_size == 5_684
 
 
 def test_gets_pypi_artifact_version() -> None:
