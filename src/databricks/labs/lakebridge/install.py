@@ -94,7 +94,7 @@ class TranspilerRepository:
         configs = filter(lambda cfg: dialect in cfg.remorph.dialects, self.all_transpiler_configs().values())
         return set(config.name for config in configs)
 
-    def transpiler_config_path(self, transpiler_name) -> Path:
+    def transpiler_config_path(self, transpiler_name: str) -> Path:
         # Note: Can't just go straight to the directory: the transpiler names don't exactly match the directory names.
         try:
             config = next(c for c in self._all_transpiler_configs() if c.name == transpiler_name)

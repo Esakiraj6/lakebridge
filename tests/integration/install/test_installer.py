@@ -21,7 +21,7 @@ def test_gets_maven_artifact_version() -> None:
     check_valid_version(version)
 
 
-def test_downloads_from_maven():
+def test_downloads_from_maven() -> None:
     with TemporaryDirectory() as parent:
         path = Path(parent) / "pom.xml"
         success = MavenInstaller.download_artifact_from_maven(
@@ -32,7 +32,7 @@ def test_downloads_from_maven():
         assert path.stat().st_size == 5_684
 
 
-def test_gets_pypi_artifact_version():
+def test_gets_pypi_artifact_version() -> None:
     version = WheelInstaller.get_latest_artifact_version_from_pypi("databricks-labs-remorph")
     assert version is not None
     check_valid_version(version)
@@ -53,12 +53,12 @@ def patched_transpiler_installer(tmp_path: Path):
         yield TranspilerInstaller
 
 
-def test_lists_all_transpiler_names(patched_transpiler_installer):
+def test_lists_all_transpiler_names(patched_transpiler_installer) -> None:
     transpiler_names = patched_transpiler_installer.all_transpiler_names()
     assert transpiler_names == {'Morpheus', 'Bladebridge'}
 
 
-def test_lists_all_dialects(patched_transpiler_installer):
+def test_lists_all_dialects(patched_transpiler_installer) -> None:
     dialects = patched_transpiler_installer.all_dialects()
     assert dialects == {
         'athena',
@@ -77,14 +77,14 @@ def test_lists_all_dialects(patched_transpiler_installer):
     }
 
 
-def test_lists_dialect_transpilers(patched_transpiler_installer):
+def test_lists_dialect_transpilers(patched_transpiler_installer) -> None:
     transpilers = patched_transpiler_installer.transpilers_with_dialect("snowflake")
     assert transpilers == {'Morpheus', 'Bladebridge'}
     transpilers = patched_transpiler_installer.transpilers_with_dialect("datastage")
     assert transpilers == {'Bladebridge'}
 
 
-def check_valid_version(version: str):
+def check_valid_version(version: str) -> None:
     parts = version.split(".")
     for _, part in enumerate(parts):
         try:
