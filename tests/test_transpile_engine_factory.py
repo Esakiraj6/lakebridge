@@ -8,9 +8,10 @@ from tests.unit.conftest import path_to_resource
 
 def test_build_sqlglot_engine():
     engine = TranspileEngineFactory.build_transpile_engine("sqlglot")
-    assert type(engine)  is SqlglotEngine
+    assert isinstance(engine, SqlglotEngine)
+
 
 def test_build_lsp_engine():
     config_path = path_to_resource("lsp_transpiler", "lsp_config.yml")
     engine = TranspileEngineFactory.build_transpile_engine(Path(config_path))
-    assert type(engine) is LSPEngine
+    assert isinstance(engine, LSPEngine)

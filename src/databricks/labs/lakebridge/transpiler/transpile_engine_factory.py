@@ -4,6 +4,7 @@ from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.sqlglot.sqlglot_engine import SqlglotEngine
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
+
 class TranspileEngineFactory:
     @staticmethod
     def build_transpile_engine(transpiler_config_path: Path) -> TranspileEngine:
