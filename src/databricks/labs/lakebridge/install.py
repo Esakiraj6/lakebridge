@@ -30,7 +30,7 @@ from databricks.labs.lakebridge.config import (
     TranspileConfig,
     ReconcileConfig,
     DatabaseConfig,
-    LakebridgeConfigs,
+    LakebridgeConfiguration,
     ReconcileMetadataConfig,
     LSPConfigOptionV1,
 )
@@ -512,8 +512,8 @@ class WorkspaceInstaller:
             raise SystemExit(msg)
 
     def run(
-        self, module: str, config: LakebridgeConfigs | None = None, artifact: str | None = None
-    ) -> LakebridgeConfigs:
+        self, module: str, config: LakebridgeConfiguration | None = None, artifact: str | None = None
+    ) -> LakebridgeConfiguration:
         logger.debug(f"Initializing workspace installation for module: {module} (config: {config})")
         if module == "transpile" and artifact:
             self.install_artifact(artifact)
@@ -639,17 +639,17 @@ class WorkspaceInstaller:
         patch = int(match["patch"] or 0)
         return feature, interim, update, patch
 
-    def configure(self, module: str) -> LakebridgeConfigs:
+    def configure(self, module: str) -> LakebridgeConfiguration:
         match module:
             case "transpile":
                 logger.info("Configuring lakebridge `transpile`.")
-                return LakebridgeConfigs(self._configure_transpile(), None)
+                return LakebridgeConfiguration(self._configure_transpile(), None)
             case "reconcile":
                 logger.info("Configuring lakebridge `reconcile`.")
-                return LakebridgeConfigs(None, self._configure_reconcile())
+                return LakebridgeConfiguration(None, self._configure_reconcile())
             case "all":
                 logger.info("Configuring lakebridge `transpile` and `reconcile`.")
-                return LakebridgeConfigs(
+                return LakebridgeConfiguration(
                     self._configure_transpile(),
                     self._configure_reconcile(),
                 )

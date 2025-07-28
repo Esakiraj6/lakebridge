@@ -11,7 +11,7 @@ from databricks.sdk.errors import NotFound
 from databricks.sdk.mixins.compute import SemVer
 from databricks.sdk.errors.platform import InvalidParameterValue, ResourceDoesNotExist
 
-from databricks.labs.lakebridge.config import LakebridgeConfigs
+from databricks.labs.lakebridge.config import LakebridgeConfiguration
 from databricks.labs.lakebridge.deployment.recon import ReconDeployment
 
 logger = logging.getLogger("databricks.labs.lakebridge.install")
@@ -91,14 +91,14 @@ class WorkspaceInstallation:
             wheel_paths = [f"/Workspace{wheel}" for wheel in wheel_paths]
             return wheel_paths
 
-    def install(self, config: LakebridgeConfigs):
+    def install(self, config: LakebridgeConfiguration):
         self._apply_upgrades()
         wheel_paths: list[str] = self._upload_wheel()
         if config.reconcile:
             logger.info("Installing Lakebridge reconcile Metadata components.")
             self._recon_deployment.install(config.reconcile, wheel_paths)
 
-    def uninstall(self, config: LakebridgeConfigs):
+    def uninstall(self, config: LakebridgeConfiguration):
         # This will remove all the Lakebridge modules
         if not self._prompts.confirm(
             "Do you want to uninstall Lakebridge from the workspace too, this would "
