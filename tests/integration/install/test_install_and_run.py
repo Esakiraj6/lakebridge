@@ -1,12 +1,19 @@
+import logging
+from collections.abc import Generator
 from pathlib import Path
 from email import policy
 from email.message import Message
 from email.parser import Parser as EmailParser
 
+import pytest
+
 from databricks.labs.lakebridge.config import TranspileConfig, TranspileResult
 from databricks.labs.lakebridge.install import TranspilerRepository, WheelInstaller, MavenInstaller
 from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
+
+
+logger = logging.getLogger(__name__)
 
 
 def process_email_content(msg: str) -> str | None:
@@ -31,6 +38,36 @@ def format_transpiled(sql: str) -> str:
     return sql
 
 
+def _capture_transpiler_logs(transpiler_repository: TranspilerRepository) -> None:
+    """Look for transpiler logs, and replicate them in the test output."""
+    logger.debug("Gathering transpiler logs...")
+    transpilers_path = transpiler_repository.transpilers_path()
+    transpiler_directories = [p for p in transpilers_path.iterdir() if p.is_dir()]
+    for transpiler_dir in transpiler_directories:
+        log_dir = transpiler_dir / "lib"
+        log_files = [log for log in log_dir.glob("*.log") if log.is_file()]
+        logger.debug(f"Found {len(log_files)} log files: {log_files}")
+        if log_files:
+            for log_file in log_files:
+                with log_file.open("r", encoding="utf-8") as f:
+                    logs = f.read()
+                log_name = log_file.relative_to(transpilers_path)
+                logger.info(f"Transpiler log for {log_name}:\n[***START OF LOG***]\n{logs}\n[***END OF LOG***]\n")
+        else:
+            log_dir_name = log_dir.relative_to(transpilers_path)
+            logger.info(f"No logs found for transpiler: {log_dir_name}")
+
+
+@pytest.fixture(name="transpiler_repository")
+def log_capturing_transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
+    labs_path = tmp_path / "labs"
+    transpiler_repository = TranspilerRepository(labs_path=labs_path)
+    try:
+        yield transpiler_repository
+    finally:
+        _capture_transpiler_logs(transpiler_repository)
+
+
 async def run_lsp_operations(
     engine: TranspileEngine,
     transpile_config: TranspileConfig,
@@ -48,11 +85,13 @@ async def run_lsp_operations(
 
 
 # TODO: Remove this test? We really want to test the latest published version.
-async def test_installs_and_runs_local_bladebridge(bladebridge_artifact: Path, tmp_path: Path) -> None:
-    labs_path = tmp_path / "labs"
-    input_source = labs_path / "input_source"
-    output_folder = labs_path / "output_folder"
-    transpiler_repository = TranspilerRepository(labs_path)
+async def test_installs_and_runs_local_bladebridge(
+    bladebridge_artifact: Path,
+    transpiler_repository: TranspilerRepository,
+    tmp_path: Path,
+) -> None:
+    input_source = tmp_path / "input_source"
+    output_folder = tmp_path / "output_folder"
     await _install_and_run_local_bladebridge(transpiler_repository, bladebridge_artifact, input_source, output_folder)
 
 
@@ -82,11 +121,9 @@ async def _install_and_run_local_bladebridge(
     assert transpiled == sql_code
 
 
-async def test_installs_and_runs_pypi_bladebridge(tmp_path: Path) -> None:
-    labs_path = tmp_path / "labs"
-    input_source = labs_path / "input_source"
-    output_folder = labs_path / "output_folder"
-    transpiler_repository = TranspilerRepository(labs_path)
+async def test_installs_and_runs_pypi_bladebridge(transpiler_repository: TranspilerRepository, tmp_path: Path) -> None:
+    input_source = tmp_path / "input_source"
+    output_folder = tmp_path / "output_folder"
     await _install_and_run_pypi_bladebridge(transpiler_repository, input_source, output_folder)
 
 
@@ -116,11 +153,13 @@ async def _install_and_run_pypi_bladebridge(
 
 
 # TODO: Remove this test? We really want to test the latest published version.
-async def test_installs_and_runs_local_morpheus(morpheus_artifact: Path, tmp_path: Path) -> None:
-    labs_path = tmp_path / "labs"
-    input_source = labs_path / "input_source"
-    output_folder = labs_path / "output_folder"
-    transpiler_repository = TranspilerRepository(labs_path)
+async def test_installs_and_runs_local_morpheus(
+    morpheus_artifact: Path,
+    transpiler_repository: TranspilerRepository,
+    tmp_path: Path,
+) -> None:
+    input_source = tmp_path / "input_source"
+    output_folder = tmp_path / "output_folder"
     await _install_and_run_local_morpheus(transpiler_repository, morpheus_artifact, input_source, output_folder)
 
 
@@ -152,11 +191,9 @@ async def _install_and_run_local_morpheus(
     assert transpiled == sql_code
 
 
-async def test_installs_and_runs_maven_morpheus(tmp_path: Path) -> None:
-    labs_path = tmp_path / "labs"
-    input_source = labs_path / "input_source"
-    output_folder = labs_path / "output_folder"
-    transpiler_repository = TranspilerRepository(labs_path)
+async def test_installs_and_runs_maven_morpheus(transpiler_repository: TranspilerRepository, tmp_path: Path) -> None:
+    input_source = tmp_path / "input_source"
+    output_folder = tmp_path / "output_folder"
     await _install_and_run_maven_morpheus(transpiler_repository, input_source, output_folder)
 
 
