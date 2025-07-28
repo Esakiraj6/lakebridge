@@ -6,6 +6,8 @@ import pytest
 
 from databricks.labs.lakebridge.install import MavenInstaller, TranspilerRepository, WheelInstaller, WorkspaceInstaller
 
+# TODO: These should run as part of the integration tests, not a separate test suite.
+
 
 @pytest.fixture()
 def transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
