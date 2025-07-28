@@ -60,6 +60,9 @@ class TranspilerRepository:
     def __init__(self, labs_path: Path) -> None:
         self._labs_path = labs_path
 
+    def __repr__(self) -> str:
+        return f"TranspilerRepository(labs_path={self._labs_path!r})"
+
     def transpilers_path(self) -> Path:
         return self._labs_path / "remorph-transpilers"
 
