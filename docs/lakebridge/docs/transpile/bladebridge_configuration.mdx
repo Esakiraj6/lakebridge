@@ -120,7 +120,7 @@ Each element of the rules array is a structure with the following elements.
 
 - **Rule:**  
   ```json
-  {"from" : "\bSELECT\s+(V_\w+)(\s*\=.*)\;", "to" : "SET $1 = (SELECT $2 limit 1);"}
+  {"from" : "\bSELECT\s+(V_\w+)\s*\=(.*)\;", "to" : "SET $1 = (SELECT $2 limit 1);"}
 
 - **Result:**  
   `SET V_TOTAL = (SELECT = COUNT(*) FROM orders limit 1);
