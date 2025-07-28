@@ -1,7 +1,6 @@
 import os
 import shutil
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
