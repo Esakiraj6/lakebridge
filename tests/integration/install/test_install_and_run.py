@@ -62,10 +62,9 @@ def _capture_transpiler_logs(transpiler_repository: TranspilerRepository) -> Non
 def log_capturing_transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
     labs_path = tmp_path / "labs"
     transpiler_repository = TranspilerRepository(labs_path=labs_path)
-    try:
-        yield transpiler_repository
-    finally:
-        _capture_transpiler_logs(transpiler_repository)
+    yield transpiler_repository
+    # This will run after the test completes, even if it fails.
+    _capture_transpiler_logs(transpiler_repository)
 
 
 async def run_lsp_operations(
