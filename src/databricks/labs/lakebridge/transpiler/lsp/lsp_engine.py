@@ -373,6 +373,11 @@ class LSPEngine(TranspileEngine):
 
     @classmethod
     def from_config_path(cls, config_path: Path) -> LSPEngine:
+        if not config_path.exists():
+            raise ValueError(
+                f"Error: Invalid value for '--transpiler-config-path': '{str(config_path)}', file does not exist."
+            )
+
         config = LSPConfig.load(config_path)
         return LSPEngine(config_path.parent, config)
 
