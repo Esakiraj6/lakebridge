@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import abc
 import dataclasses
@@ -60,10 +62,15 @@ class TranspilerRepository:
         """Return the default path where labs applications are installed."""
         return Path.home() / ".databricks" / "labs"
 
-    @staticmethod
-    def user_home() -> "TranspilerRepository":
+    _default_repository: TranspilerRepository | None = None
+
+    @classmethod
+    def user_home(cls) -> TranspilerRepository:
         """The default repository for transpilers in the current user's home directory."""
-        return _DEFAULT_REPOSITORY
+        repository = cls._default_repository
+        if repository is None:
+            cls._default_repository = repository = cls(cls.default_labs_path())
+        return repository
 
     def __init__(self, labs_path: Path) -> None:
         """Initialize the repository, based in the given location.
@@ -73,7 +80,7 @@ class TranspilerRepository:
         Args:
             labs_path: The path where the labs applications are installed.
         """
-        if self != _DEFAULT_REPOSITORY and labs_path == self.default_labs_path():
+        if self._default_repository == self and labs_path == self.default_labs_path():
             raise ValueError("Use TranspilerRepository.user_home() to get the default repository.")
         self._labs_path = labs_path
 
@@ -149,9 +156,6 @@ class TranspilerRepository:
         except ValueError as e:
             logger.error(f"Could not load config: {path!s}", exc_info=e)
             return None
-
-
-_DEFAULT_REPOSITORY: TranspilerRepository = TranspilerRepository(TranspilerRepository.default_labs_path())
 
 
 class TranspilerInstaller(abc.ABC):
@@ -525,7 +529,7 @@ class WorkspaceInstaller:
         resource_configurator: ResourceConfigurator,
         workspace_installation: WorkspaceInstallation,
         environ: dict[str, str] | None = None,
-        transpiler_repository: TranspilerRepository = _DEFAULT_REPOSITORY,
+        transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
     ):
         self._ws = ws
         self._prompts = prompts
