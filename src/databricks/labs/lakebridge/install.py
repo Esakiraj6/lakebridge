@@ -48,6 +48,13 @@ TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
 
 # TODO: Move this into a separate module.
 class TranspilerRepository:
+    """
+    Repository for managing the installed transpilers in the user's home directory.
+
+    The default repository for a user is always located under ~/.databricks/labs, and can be obtained
+    via the `TranspilerRepository.user_home()` method.
+    """
+
     @staticmethod
     def default_labs_path() -> Path:
         """Return the default path where labs applications are installed."""
@@ -55,10 +62,19 @@ class TranspilerRepository:
 
     @staticmethod
     def user_home() -> "TranspilerRepository":
-        """The default repository for the in the current user's home directory."""
+        """The default repository for transpilers in the current user's home directory."""
         return _DEFAULT_REPOSITORY
 
     def __init__(self, labs_path: Path) -> None:
+        """Initialize the repository, based in the given location.
+
+        This should only be used directly by tests; for the default repository, use `TranspilerRepository.user_home()`.
+
+        Args:
+            labs_path: The path where the labs applications are installed.
+        """
+        if self != _DEFAULT_REPOSITORY and labs_path == self.default_labs_path():
+            raise ValueError("Use TranspilerRepository.user_home() to get the default repository.")
         self._labs_path = labs_path
 
     def __repr__(self) -> str:
