@@ -49,8 +49,9 @@ class TranspilingContext:
 
 
 async def _process_one_file(context: TranspilingContext) -> tuple[int, list[TranspileError]]:
+    input_path = context.input_path
 
-    logger.debug(f"Started processing file: {context.input_path!s}")
+    logger.debug(f"Started processing file: {input_path}")
 
     if not context.config.source_dialect:
         error = TranspileError(
@@ -62,7 +63,11 @@ async def _process_one_file(context: TranspilingContext) -> tuple[int, list[Tran
         )
         return 0, [error]
 
-    source_code = read_text(context.input_path)
+    # Check if it looks like XML, where we need to sniff the encoding instead of relying on a BOM or defaulting to the
+    # local platform encoding.
+    sniff_xml_encoding = input_path.suffix.lower() == ".xml"
+
+    source_code = read_text(input_path, detect_xml=sniff_xml_encoding)
     context = dataclasses.replace(context, source_code=source_code)
 
     transpile_result = await _transpile(
