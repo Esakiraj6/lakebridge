@@ -1,4 +1,6 @@
 import logging
+import shutil
+import sys
 from collections.abc import Generator
 from pathlib import Path
 from email import policy
@@ -8,7 +10,7 @@ from email.parser import Parser as EmailParser
 import pytest
 
 from databricks.labs.lakebridge.config import TranspileConfig, TranspileResult
-from databricks.labs.lakebridge.install import TranspilerRepository, WheelInstaller, MavenInstaller
+from databricks.labs.lakebridge.install import TranspilerRepository, WheelInstaller, MavenInstaller, _DEFAULT_REPOSITORY
 from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
@@ -60,8 +62,14 @@ def _capture_transpiler_logs(transpiler_repository: TranspilerRepository) -> Non
 
 @pytest.fixture(name="transpiler_repository")
 def log_capturing_transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
-    labs_path = tmp_path / "labs"
-    transpiler_repository = TranspilerRepository(labs_path=labs_path)
+    if sys.platform == "win32":
+        # TODO: Test code, to identify why this is needed on Windows
+        logger.debug("Running on Windows, using (wiped!) default repository for tests.")
+        transpiler_repository = _DEFAULT_REPOSITORY
+        shutil.rmtree(transpiler_repository.transpilers_path() / "bladebridge", ignore_errors=True)
+    else:
+        labs_path = tmp_path / "labs"
+        transpiler_repository = TranspilerRepository(labs_path=labs_path)
     try:
         yield transpiler_repository
     finally:
