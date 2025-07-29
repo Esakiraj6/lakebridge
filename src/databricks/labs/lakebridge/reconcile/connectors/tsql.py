@@ -83,6 +83,20 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         options: JdbcReaderOptions | None,
     ) -> DataFrame:
         table_query = query.replace(":tbl", f"{catalog}.{schema}.{table}")
+
+        try:
+            if options is None:
+                query, prepare_query_string = self.handle_with_clause(table_query)
+                df = self.reader(query, prepare_query_string).load()
+            else:
+                options = self._get_jdbc_reader_options(options)
+                df = self._get_jdbc_reader(table_query, self.get_jdbc_url, self._DRIVER).options(**options).load()
+            return df.select([col(column).alias(column.lower()) for column in df.columns])
+        except (RuntimeError, PySparkException) as e:
+            return self.log_and_throw_exception(e, "data", table_query)
+
+    # FIXME: Document
+    def handle_with_clause(self, table_query: str):
         with_clause_pattern = re.compile(r'WITH\s+.*?\)\s*(?=SELECT)', re.IGNORECASE | re.DOTALL)
         match = with_clause_pattern.search(table_query)
         if match:
@@ -91,15 +105,7 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         else:
             query = table_query
             prepare_query_string = ""
-        try:
-            if options is None:
-                df = self.reader(query, prepare_query_string).load()
-            else:
-                options = self._get_jdbc_reader_options(options)
-                df = self._get_jdbc_reader(table_query, self.get_jdbc_url, self._DRIVER).options(**options).load()
-            return df.select([col(column).alias(column.lower()) for column in df.columns])
-        except (RuntimeError, PySparkException) as e:
-            return self.log_and_throw_exception(e, "data", table_query)
+        return query, prepare_query_string
 
     def get_schema(
         self,

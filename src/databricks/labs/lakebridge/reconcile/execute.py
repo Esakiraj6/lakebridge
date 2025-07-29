@@ -14,6 +14,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileConfig,
     ReconcileMetadataConfig,
 )
+from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.compare import (
     capture_mismatch_data_and_columns,
@@ -224,7 +225,7 @@ def recon(
         schema_reconcile_output = SchemaReconcileOutput(is_valid=True)
         data_reconcile_output = DataReconcileOutput()
         try:
-            src_schema, tgt_schema = _get_schema(
+            src_schema, tgt_schema = SchemaService.get_schemas(
                 source=source, target=target, table_conf=table_conf, database_config=reconcile_config.database_config
             )
         except DataSourceRuntimeException as e:
@@ -384,7 +385,7 @@ def reconcile_aggregates(
     for table_conf in table_recon.tables:
         recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
         try:
-            src_schema, tgt_schema = _get_schema(
+            src_schema, tgt_schema = SchemaService.get_schemas(
                 source=source,
                 target=target,
                 table_conf=table_conf,
@@ -856,26 +857,6 @@ class Reconciliation:
 
             return ReconcileRecordCount(source=int(source_count), target=int(target_count))
         return ReconcileRecordCount()
-
-
-def _get_schema(
-    source: DataSource,
-    target: DataSource,
-    table_conf: Table,
-    database_config: DatabaseConfig,
-) -> tuple[list[Schema], list[Schema]]:
-    src_schema = source.get_schema(
-        catalog=database_config.source_catalog,
-        schema=database_config.source_schema,
-        table=table_conf.source_name,
-    )
-    tgt_schema = target.get_schema(
-        catalog=database_config.target_catalog,
-        schema=database_config.target_schema,
-        table=table_conf.target_name,
-    )
-
-    return src_schema, tgt_schema
 
 
 def _run_reconcile_data(

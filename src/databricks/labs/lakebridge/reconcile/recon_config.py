@@ -189,6 +189,7 @@ class Table:
     column_thresholds: list[ColumnThresholds] | None = None
     filters: Filters | None = None
     table_thresholds: list[TableThresholds] | None = None
+    is_columns_escaped: bool = False
 
     def __post_init__(self):
         self.source_name = self.source_name.lower()
@@ -290,6 +291,7 @@ class Table:
 class Schema:
     column_name: str
     data_type: str
+    is_escaped: bool = False
 
 
 @dataclass

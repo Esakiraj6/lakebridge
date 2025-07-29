@@ -6,6 +6,8 @@ from typing import Any, Literal, cast
 
 from databricks.labs.blueprint.installation import JsonValue
 from databricks.labs.blueprint.tui import Prompts
+
+from databricks.labs.lakebridge.reconcile.table_service import TableService
 from databricks.labs.lakebridge.transpiler.transpile_status import TranspileError
 from databricks.labs.lakebridge.reconcile.recon_config import Table
 
@@ -134,6 +136,7 @@ class TableRecon:
         self.target_schema = self.target_schema.lower()
         self.target_catalog = self.target_catalog.lower()
         self.source_catalog = self.source_catalog.lower() if self.source_catalog else self.source_catalog
+        self.tables = TableService.escape_recon_tables_configs(self.tables)
 
 
 @dataclass
