@@ -216,6 +216,8 @@ jobs:
         java-version: 11
 
     - name: Run install tests
+      env:
+        PYTEST_DEBUG_TEMPROOT: ${{ runner.temp }}
       run: hatch run test-install
 
     - name: Publish test coverage

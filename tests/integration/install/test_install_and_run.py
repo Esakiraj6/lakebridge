@@ -62,7 +62,7 @@ def _capture_transpiler_logs(transpiler_repository: TranspilerRepository) -> Non
 
 @pytest.fixture(name="transpiler_repository")
 def log_capturing_transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
-    if sys.platform == "win32":
+    if False and sys.platform == "win32":
         # TODO: Test code, to identify why this is needed on Windows
         logger.debug("Running on Windows, using (wiped!) default repository for tests.")
         transpiler_repository = _DEFAULT_REPOSITORY
