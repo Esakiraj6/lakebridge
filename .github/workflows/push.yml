@@ -217,7 +217,9 @@ jobs:
 
     - name: Run install tests
       env:
-        PYTEST_DEBUG_TEMPROOT: ${{ runner.temp }}
+        # Without this Python will use AppData\Local\Temp on Windows, leading to test failures.
+        # (Unclear if this is related to permissions, or possibly path length issues due to 260-character maximum.)
+        TMPDIR: ${{ runner.temp }}
       run: hatch run test-install
 
     - name: Publish test coverage
