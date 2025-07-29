@@ -91,15 +91,6 @@ async def test_installs_and_runs_local_bladebridge(
 ) -> None:
     input_source = tmp_path / "input_source"
     output_folder = tmp_path / "output_folder"
-    await _install_and_run_local_bladebridge(transpiler_repository, bladebridge_artifact, input_source, output_folder)
-
-
-async def _install_and_run_local_bladebridge(
-    transpiler_repository: TranspilerRepository,
-    bladebridge_artifact: Path,
-    input_source: Path,
-    output_folder: Path,
-) -> None:
     WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin", bladebridge_artifact).install()
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
     lsp_engine = TranspileEngine.load_engine(config_path)
@@ -123,14 +114,6 @@ async def _install_and_run_local_bladebridge(
 async def test_installs_and_runs_pypi_bladebridge(transpiler_repository: TranspilerRepository, tmp_path: Path) -> None:
     input_source = tmp_path / "input_source"
     output_folder = tmp_path / "output_folder"
-    await _install_and_run_pypi_bladebridge(transpiler_repository, input_source, output_folder)
-
-
-async def _install_and_run_pypi_bladebridge(
-    transpiler_repository: TranspilerRepository,
-    input_source: Path,
-    output_folder: Path,
-) -> None:
     WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin").install()
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
     engine = TranspileEngine.load_engine(config_path)
@@ -159,15 +142,6 @@ async def test_installs_and_runs_local_morpheus(
 ) -> None:
     input_source = tmp_path / "input_source"
     output_folder = tmp_path / "output_folder"
-    await _install_and_run_local_morpheus(transpiler_repository, morpheus_artifact, input_source, output_folder)
-
-
-async def _install_and_run_local_morpheus(
-    transpiler_repository: TranspilerRepository,
-    morpheus_artifact: Path,
-    input_source: Path,
-    output_folder: Path,
-) -> None:
     MavenInstaller(
         transpiler_repository, "morpheus", "com.databricks.labs", "databricks-morph-plugin", morpheus_artifact
     ).install()
@@ -193,14 +167,6 @@ async def _install_and_run_local_morpheus(
 async def test_installs_and_runs_maven_morpheus(transpiler_repository: TranspilerRepository, tmp_path: Path) -> None:
     input_source = tmp_path / "input_source"
     output_folder = tmp_path / "output_folder"
-    await _install_and_run_maven_morpheus(transpiler_repository, input_source, output_folder)
-
-
-async def _install_and_run_maven_morpheus(
-    transpiler_repository: TranspilerRepository,
-    input_source: Path,
-    output_folder: Path,
-) -> None:
     MavenInstaller(transpiler_repository, "morpheus", "com.databricks.labs", "databricks-morph-plugin").install()
     config_path = transpiler_repository.transpiler_config_path("Morpheus")
     engine = LSPEngine.from_config_path(config_path)
