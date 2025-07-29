@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
 
 
+# TODO: Move this into a separate module.
 class TranspilerRepository:
     @staticmethod
     def default_labs_path() -> Path:
