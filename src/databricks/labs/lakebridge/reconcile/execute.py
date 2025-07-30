@@ -15,6 +15,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileMetadataConfig,
 )
 from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
+from databricks.labs.lakebridge.reconcile.table_service import ReconTableService
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.compare import (
     capture_mismatch_data_and_columns,
@@ -194,6 +195,7 @@ def recon(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
+    table_service = ReconTableService(source=source)
 
     recon_id = str(uuid4())
     # initialise the Reconciliation
@@ -221,25 +223,26 @@ def recon(
     )
 
     for table_conf in table_recon.tables:
+        normalized_table_conf = table_service.normalize_recon_table_config(table_conf)
         recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
         schema_reconcile_output = SchemaReconcileOutput(is_valid=True)
         data_reconcile_output = DataReconcileOutput()
         try:
-            src_schema, tgt_schema = SchemaService.get_schemas(
-                source=source, target=target, table_conf=table_conf, database_config=reconcile_config.database_config
+            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
+                source=source, target=target, table_conf=normalized_table_conf, database_config=reconcile_config.database_config
             )
         except DataSourceRuntimeException as e:
             schema_reconcile_output = SchemaReconcileOutput(is_valid=False, exception=str(e))
         else:
             if report_type in {"schema", "all"}:
                 schema_reconcile_output = _run_reconcile_schema(
-                    reconciler=reconciler, table_conf=table_conf, src_schema=src_schema, tgt_schema=tgt_schema
+                    reconciler=reconciler, table_conf=normalized_table_conf, src_schema=src_schema, tgt_schema=tgt_schema
                 )
                 logger.warning("Schema comparison is completed.")
 
             if report_type in {"data", "row", "all"}:
                 data_reconcile_output = _run_reconcile_data(
-                    reconciler=reconciler, table_conf=table_conf, src_schema=src_schema, tgt_schema=tgt_schema
+                    reconciler=reconciler, table_conf=normalized_table_conf, src_schema=src_schema, tgt_schema=tgt_schema
                 )
                 logger.warning(f"Reconciliation for '{report_type}' report completed.")
 
@@ -248,13 +251,13 @@ def recon(
         recon_capture.start(
             data_reconcile_output=data_reconcile_output,
             schema_reconcile_output=schema_reconcile_output,
-            table_conf=table_conf,
+            table_conf=normalized_table_conf,
             recon_process_duration=recon_process_duration,
-            record_count=reconciler.get_record_count(table_conf, report_type),
+            record_count=reconciler.get_record_count(normalized_table_conf, report_type),
         )
         if report_type != "schema":
             ReconIntermediatePersist(
-                spark=spark, path=generate_volume_path(table_conf, reconcile_config.metadata_config)
+                spark=spark, path=generate_volume_path(normalized_table_conf, reconcile_config.metadata_config)
             ).clean_unmatched_df_from_volume()
 
     return _verify_successful_reconciliation(
@@ -353,6 +356,7 @@ def reconcile_aggregates(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
+    table_service = ReconTableService(source=source)
 
     # Generate Unique recon_id for every run
     recon_id = str(uuid4())
@@ -383,22 +387,23 @@ def reconcile_aggregates(
 
     # Get the Aggregated Reconciliation Output for each table
     for table_conf in table_recon.tables:
+        normalized_table_conf = table_service.normalize_recon_table_config(table_conf)
         recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
         try:
-            src_schema, tgt_schema = SchemaService.get_schemas(
+            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
                 source=source,
                 target=target,
-                table_conf=table_conf,
+                table_conf=normalized_table_conf,
                 database_config=reconcile_config.database_config,
             )
         except DataSourceRuntimeException as e:
             raise ReconciliationException(message=str(e)) from e
 
-        assert table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
+        assert normalized_table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
 
         table_reconcile_agg_output_list: list[AggregateQueryOutput] = _run_reconcile_aggregates(
             reconciler=reconciler,
-            table_conf=table_conf,
+            table_conf=normalized_table_conf,
             src_schema=src_schema,
             tgt_schema=tgt_schema,
         )
@@ -408,14 +413,14 @@ def reconcile_aggregates(
         # Persist the data to the delta tables
         recon_capture.store_aggregates_metrics(
             reconcile_agg_output_list=table_reconcile_agg_output_list,
-            table_conf=table_conf,
+            table_conf=normalized_table_conf,
             recon_process_duration=recon_process_duration,
         )
 
         (
             ReconIntermediatePersist(
                 spark=spark,
-                path=generate_volume_path(table_conf, reconcile_config.metadata_config),
+                path=generate_volume_path(normalized_table_conf, reconcile_config.metadata_config),
             ).clean_unmatched_df_from_volume()
         )
 

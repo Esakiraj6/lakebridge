@@ -1,102 +1,87 @@
 import dataclasses
 
+from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.recon_config import Table, Aggregate, ColumnMapping, Transformation, \
     ColumnThresholds
-from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 
 
-class TableService:
-    @staticmethod
-    def escape_recon_tables_configs(tables: list[Table]) -> list[Table]:
-        return [TableService.escape_recon_table_config(t) for t in tables]
+class ReconTableService:
+    def __init__(self, source: DataSource):
+        self.data_source = source
 
-    @staticmethod
-    def escape_recon_table_config(table: Table) -> Table:
+    def normalize_recon_table_config(self, table: Table) -> Table:
         escaped_table = dataclasses.replace(table)
 
-        TableService._escape_sampling(escaped_table)
-        TableService._escape_aggs(escaped_table)
-        TableService._escape_join_cols(escaped_table)
-        TableService._escape_select_cols(escaped_table)
-        TableService._escape_drop_cols(escaped_table)
-        TableService._escape_col_mappings(escaped_table)
-        TableService._escape_transformations(escaped_table)
-        TableService._escape_col_thresholds(escaped_table)
+        self._normalize_sampling(escaped_table)
+        self._normalize_aggs(escaped_table)
+        self._normalize_join_cols(escaped_table)
+        self._normalize_select_cols(escaped_table)
+        self._normalize_drop_cols(escaped_table)
+        self._normalize_col_mappings(escaped_table)
+        self._normalize_transformations(escaped_table)
+        self._normalize_col_thresholds(escaped_table)
 
         escaped_table.is_columns_escaped = True
         return escaped_table
 
-    @staticmethod
-    def _escape_sampling(table: Table):
+    def _normalize_sampling(self, table: Table):
         escaped_sampling = dataclasses.replace(table.sampling_options)
-        escaped_sampling.stratified_columns = [SchemaService.escape_column(c) for c in
+        escaped_sampling.stratified_columns = [self.data_source.normalize_identifier(c) for c in
                                                escaped_sampling.stratified_columns]
         table.sampling_options = escaped_sampling
         return table
 
-    @staticmethod
-    def _escape_aggs(table: Table):
-        escaped = [TableService._escape_agg(a) for a in table.aggregates]
+    def _normalize_aggs(self, table: Table):
+        escaped = [self._normalize_agg(a) for a in table.aggregates]
         table.aggregates = escaped
         return table
 
-    @staticmethod
-    def _escape_agg(agg: Aggregate) -> Aggregate:
+    def _normalize_agg(self, agg: Aggregate) -> Aggregate:
         escaped = dataclasses.replace(agg)
-        escaped.agg_columns = [SchemaService.escape_column(c) for c in escaped.agg_columns]
-        escaped.group_by_columns = [SchemaService.escape_column(c) for c in escaped.group_by_columns]
+        escaped.agg_columns = [self.data_source.normalize_identifier(c) for c in escaped.agg_columns]
+        escaped.group_by_columns = [self.data_source.normalize_identifier(c) for c in escaped.group_by_columns]
         return escaped
 
-    @staticmethod
-    def _escape_join_cols(table: Table):
-        table.join_columns = [SchemaService.escape_column(c) for c in table.join_columns]
+    def _normalize_join_cols(self, table: Table):
+        table.join_columns = [self.data_source.normalize_identifier(c) for c in table.join_columns]
         return table
 
-    @staticmethod
-    def _escape_select_cols(table: Table):
-        table.select_columns = [SchemaService.escape_column(c) for c in table.select_columns]
+    def _normalize_select_cols(self, table: Table):
+        table.select_columns = [self.data_source.normalize_identifier(c) for c in table.select_columns]
         return table
 
-    @staticmethod
-    def _escape_drop_cols(table: Table):
-        table.drop_columns = [SchemaService.escape_column(c) for c in table.drop_columns]
+    def _normalize_drop_cols(self, table: Table):
+        table.drop_columns = [self.data_source.normalize_identifier(c) for c in table.drop_columns]
         return table
 
-    @staticmethod
-    def _escape_col_mappings(table: Table):
-        table.column_mapping = [TableService._escape_col_mapping(m) for m in table.column_mapping]
+    def _normalize_col_mappings(self, table: Table):
+        table.column_mapping = [self._normalize_col_mapping(m) for m in table.column_mapping]
         return table
 
-    @staticmethod
-    def _escape_col_mapping(mapping: ColumnMapping):
+    def _normalize_col_mapping(self, mapping: ColumnMapping):
         return ColumnMapping(
-            source_name=SchemaService.escape_column(mapping.source_name),
-            target_name=SchemaService.escape_column(mapping.target_name),
+            source_name=self.data_source.normalize_identifier(mapping.data_source_name),
+            target_name=self.data_source.normalize_identifier(mapping.target_name),
         )
 
-    @staticmethod
-    def _escape_transformations(table: Table):
-        table.transformations = [TableService._escape_transformation(t) for t in table.transformations]
+    def _normalize_transformations(self, table: Table):
+        table.transformations = [self._normalize_transformation(t) for t in table.transformations]
         return table
 
-    @staticmethod
-    def _escape_transformation(transform: Transformation):
+    def _normalize_transformation(self, transform: Transformation):
         escaped = dataclasses.replace(transform)
-        escaped.column_name = SchemaService.escape_column(transform.column_name)
+        escaped.column_name = self.data_source.normalize_identifier(transform.column_name)
         return escaped
 
-    @staticmethod
-    def _escape_col_thresholds(table: Table):
-        table.column_thresholds = [TableService._escape_col_threshold(t) for t in table.column_thresholds]
+    def _normalize_col_thresholds(self, table: Table):
+        table.column_thresholds = [self._normalize_col_threshold(t) for t in table.column_thresholds]
         return table
 
-    @staticmethod
-    def _escape_col_threshold(threshold: ColumnThresholds):
+    def _normalize_col_threshold(self, threshold: ColumnThresholds):
         escaped = dataclasses.replace(threshold)
-        escaped.column_name = SchemaService.escape_column(threshold.column_name)
+        escaped.column_name = self.data_source.normalize_identifier(threshold.column_name)
         return escaped
 
     # TODO implement
-    @staticmethod
-    def _escape_filters(table: Table):
+    def _normalize_filters(self, table: Table):
         return table

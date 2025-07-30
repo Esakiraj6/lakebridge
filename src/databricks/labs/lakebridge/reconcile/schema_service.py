@@ -6,7 +6,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import Schema, Table
 class SchemaService:
 
     @staticmethod
-    def get_schemas(
+    def get_normalized_schemas(
         source: DataSource,
         target: DataSource,
         table_conf: Table,
@@ -24,23 +24,19 @@ class SchemaService:
             table=table_conf.target_name,
         )
 
-        sanitized_src_schema = SchemaService.escape_schema(src_schema)
-        sanitized_tgt_schema = SchemaService.escape_schema(tgt_schema)
+        sanitized_src_schema = SchemaService.normalize_schema(source, src_schema)
+        sanitized_tgt_schema = SchemaService.normalize_schema(target, tgt_schema)
 
         return sanitized_src_schema, sanitized_tgt_schema
 
     @staticmethod
-    def escape_schema(columns: list[Schema]) -> list[Schema]:
-        return [SchemaService._escape_schema_column(c) for c in columns]
+    def normalize_schema(data_source: DataSource, columns: list[Schema]) -> list[Schema]:
+        return [SchemaService._normalize_schema_column(data_source, c) for c in columns]
 
     @staticmethod
-    def _escape_schema_column(column: Schema) -> Schema:
+    def _normalize_schema_column(data_source: DataSource, column: Schema) -> Schema:
         return Schema(
-            column_name=SchemaService.escape_column(column.column_name),
+            column_name=data_source.normalize_identifier(column.column_name),
             data_type=column.data_type,
             is_escaped=True
         )
-
-    @staticmethod
-    def escape_column(column: str) -> str:
-        return f"`{column}`"
