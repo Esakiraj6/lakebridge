@@ -113,9 +113,9 @@ The utility consists of three key Databricks notebooks:
 To run the utility, the following parameters must be set:
 
 - `label`: The label from the table table_configs which will be used as a filter for validating only selected tables with the specific label.
-- `lakebridge_catalog`: The catalog configured through CLI.
-- `lakebridge_schema`: The schema configured through CLI.
-- `lakebridge_config_table`: The table configs created as a part of the pre-requisites.
+- `remorph_catalog`: The catalog configured through CLI.
+- `remorph_schema`: The schema configured through CLI.
+- `remorph_config_table`: The table configs created as a part of the pre-requisites.
 - `secret_scope`: The Databricks secret scope for accessing the source system. Refer to the Lakebridge documentation for the specific keys required to be configured as per the source system.
 - `source_system`: The source system against which reconciliation is performed.
 - `table_recon_summary`: The target summary table created as a part of the pre-requisites.
