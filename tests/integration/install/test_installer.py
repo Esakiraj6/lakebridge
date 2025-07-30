@@ -1,64 +1,58 @@
-import os
 import shutil
+from collections.abc import Generator
 from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 import pytest
 
-from databricks.labs.lakebridge.install import TranspilerInstaller, MavenInstaller, WorkspaceInstaller, WheelInstaller
+from databricks.labs.lakebridge.install import MavenInstaller, TranspilerRepository, WheelInstaller, WorkspaceInstaller
+
+# TODO: These should run as part of the integration tests, not a separate test suite.
 
 
-@pytest.mark.skipif(os.environ.get("CI", "false") == "true", reason="Skipping in CI since we have no installed product")
-def test_gets_installed_remorph_version(patched_transpiler_installer):
-    version = patched_transpiler_installer.get_installed_version("remorph", False)
-    check_valid_version(version)
+@pytest.fixture()
+def transpiler_repository(tmp_path: Path) -> Generator[TranspilerRepository, None, None]:
+    resources_folder = Path(__file__).parent.parent.parent / "resources" / "transpiler_configs"
+    labs_path = tmp_path / "labs"
+    repository = TranspilerRepository(labs_path=labs_path)
+    for transpiler in ("bladebridge", "morpheus"):
+        install_directory = repository.transpilers_path() / transpiler / "lib"
+        install_directory.mkdir(parents=True)
+        source = resources_folder / transpiler / "lib" / "config.yml"
+        target = install_directory / "config.yml"
+        # Just the config file, not the whole thing: we're only testing the repository and transpiler metadata.
+        shutil.copyfile(source, target)
+    yield repository
 
 
 def test_gets_maven_artifact_version() -> None:
     version = MavenInstaller.get_current_maven_artifact_version("com.databricks", "databricks-connect")
-    assert version
+    assert version is not None
     check_valid_version(version)
 
 
-def test_downloads_from_maven():
-    with TemporaryDirectory() as parent:
-        path = Path(parent) / "pom.xml"
-        success = MavenInstaller.download_artifact_from_maven(
-            "com.databricks", "databricks-connect", "16.0.0", path, extension="pom"
-        )
-        assert success
-        assert path.exists()
-        assert path.stat().st_size == 5_684
+def test_downloads_from_maven(tmp_path: Path) -> None:
+    pom_path = tmp_path / "pom.xml"
+    success = MavenInstaller.download_artifact_from_maven(
+        "com.databricks", "databricks-connect", "16.0.0", pom_path, extension="pom"
+    )
+    assert success
+    assert pom_path.exists()
+    assert pom_path.stat().st_size == 5_684
 
 
-def test_gets_pypi_artifact_version():
+def test_gets_pypi_artifact_version() -> None:
     version = WheelInstaller.get_latest_artifact_version_from_pypi("databricks-labs-remorph")
+    assert version is not None
     check_valid_version(version)
 
 
-@pytest.fixture()
-def patched_transpiler_installer(tmp_path: Path):
-    resources_folder = Path(__file__).parent.parent.parent / "resources" / "transpiler_configs"
-    for transpiler in ("bladebridge", "morpheus"):
-        target = tmp_path / transpiler
-        target.mkdir(exist_ok=True)
-        target = target / "lib"
-        target.mkdir(exist_ok=True)
-        target = target / "config.yml"
-        source = resources_folder / transpiler / "lib" / "config.yml"
-        shutil.copyfile(source, target)
-    with patch.object(TranspilerInstaller, "transpilers_path", return_value=tmp_path):
-        yield TranspilerInstaller
-
-
-def test_lists_all_transpiler_names(patched_transpiler_installer):
-    transpiler_names = patched_transpiler_installer.all_transpiler_names()
+def test_lists_all_transpiler_names(transpiler_repository: TranspilerRepository) -> None:
+    transpiler_names = transpiler_repository.all_transpiler_names()
     assert transpiler_names == {'Morpheus', 'Bladebridge'}
 
 
-def test_lists_all_dialects(patched_transpiler_installer):
-    dialects = patched_transpiler_installer.all_dialects()
+def test_lists_all_dialects(transpiler_repository: TranspilerRepository) -> None:
+    dialects = transpiler_repository.all_dialects()
     assert dialects == {
         'athena',
         'bigquery',
@@ -76,14 +70,14 @@ def test_lists_all_dialects(patched_transpiler_installer):
     }
 
 
-def test_lists_dialect_transpilers(patched_transpiler_installer):
-    transpilers = patched_transpiler_installer.transpilers_with_dialect("snowflake")
+def test_lists_dialect_transpilers(transpiler_repository: TranspilerRepository) -> None:
+    transpilers = transpiler_repository.transpilers_with_dialect("snowflake")
     assert transpilers == {'Morpheus', 'Bladebridge'}
-    transpilers = patched_transpiler_installer.transpilers_with_dialect("datastage")
+    transpilers = transpiler_repository.transpilers_with_dialect("datastage")
     assert transpilers == {'Bladebridge'}
 
 
-def check_valid_version(version: str):
+def check_valid_version(version: str) -> None:
     parts = version.split(".")
     for _, part in enumerate(parts):
         try:

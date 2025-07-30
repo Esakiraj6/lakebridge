@@ -11,7 +11,6 @@ from databricks.labs.bladespector.analyzer import Analyzer
 
 
 def test_analyze(mock_workspace_client, tmp_path: Path):
-
     supported_tech = sorted(Analyzer.supported_source_technologies(), key=str.casefold)
     tech_enum = next((i for i, tech in enumerate(supported_tech) if tech == "Informatica - PC"), 12)
 

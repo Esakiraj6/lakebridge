@@ -101,7 +101,6 @@ def mock_cli_for_transpile(
     )
     mock_app_context = create_autospec(ApplicationContext)
     with (
-        patch("databricks.labs.lakebridge.install.TranspilerInstaller.transpilers_path", return_value=TRANSPILERS_PATH),
         patch("databricks.labs.lakebridge.cli.do_transpile", new=do_transpile),
         patch("databricks.labs.lakebridge.cli.ApplicationContext", mock_app_context),
     ):
