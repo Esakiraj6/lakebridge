@@ -15,7 +15,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileMetadataConfig,
 )
 from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
-from databricks.labs.lakebridge.reconcile.table_service import ReconTableService
+from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.compare import (
     capture_mismatch_data_and_columns,
@@ -195,7 +195,7 @@ def recon(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
-    table_service = ReconTableService(source=source)
+    table_service = NormalizeReconConfigService(source=source)
 
     recon_id = str(uuid4())
     # initialise the Reconciliation
@@ -229,20 +229,29 @@ def recon(
         data_reconcile_output = DataReconcileOutput()
         try:
             src_schema, tgt_schema = SchemaService.get_normalized_schemas(
-                source=source, target=target, table_conf=normalized_table_conf, database_config=reconcile_config.database_config
+                source=source,
+                target=target,
+                table_conf=normalized_table_conf,
+                database_config=reconcile_config.database_config,
             )
         except DataSourceRuntimeException as e:
             schema_reconcile_output = SchemaReconcileOutput(is_valid=False, exception=str(e))
         else:
             if report_type in {"schema", "all"}:
                 schema_reconcile_output = _run_reconcile_schema(
-                    reconciler=reconciler, table_conf=normalized_table_conf, src_schema=src_schema, tgt_schema=tgt_schema
+                    reconciler=reconciler,
+                    table_conf=normalized_table_conf,
+                    src_schema=src_schema,
+                    tgt_schema=tgt_schema,
                 )
                 logger.warning("Schema comparison is completed.")
 
             if report_type in {"data", "row", "all"}:
                 data_reconcile_output = _run_reconcile_data(
-                    reconciler=reconciler, table_conf=normalized_table_conf, src_schema=src_schema, tgt_schema=tgt_schema
+                    reconciler=reconciler,
+                    table_conf=normalized_table_conf,
+                    src_schema=src_schema,
+                    tgt_schema=tgt_schema,
                 )
                 logger.warning(f"Reconciliation for '{report_type}' report completed.")
 
@@ -356,7 +365,7 @@ def reconcile_aggregates(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
-    table_service = ReconTableService(source=source)
+    table_service = NormalizeReconConfigService(source=source)
 
     # Generate Unique recon_id for every run
     recon_id = str(uuid4())

@@ -8,6 +8,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions,
 
 logger = logging.getLogger(__name__)
 
+
 class DataSource(ABC):
 
     @abstractmethod
@@ -37,9 +38,7 @@ class DataSource(ABC):
     @staticmethod
     def _add_backticks_for(identifier: str, start_delimiter: str, end_delimiter: str) -> str:
         if DataSource._is_already_delimited(identifier, start_delimiter, end_delimiter):
-            stripped_identifier = (identifier
-                                   .removeprefix(start_delimiter)
-                                   .removesuffix(end_delimiter))
+            stripped_identifier = identifier.removeprefix(start_delimiter).removesuffix(end_delimiter)
         else:
             stripped_identifier = identifier
         return f"`{stripped_identifier}`"

@@ -174,4 +174,3 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
 
     def normalize_identifier(self, identifier: str) -> str:
         return DataSource._add_backticks_for(identifier, "\"\"", "\"\"")
-

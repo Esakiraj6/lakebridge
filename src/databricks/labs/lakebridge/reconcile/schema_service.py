@@ -38,5 +38,5 @@ class SchemaService:
         return Schema(
             column_name=data_source.normalize_identifier(column.column_name),
             data_type=column.data_type,
-            is_escaped=True
+            is_escaped=True,
         )
