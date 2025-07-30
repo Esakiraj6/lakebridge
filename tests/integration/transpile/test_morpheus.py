@@ -3,8 +3,9 @@ from pathlib import Path
 from databricks.sdk import WorkspaceClient
 
 from databricks.labs.lakebridge.config import TranspileConfig
-from databricks.labs.lakebridge.install import TranspilerRepository, MavenInstaller
+from databricks.labs.lakebridge.install import MavenInstaller
 from databricks.labs.lakebridge.transpiler.execute import transpile
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 

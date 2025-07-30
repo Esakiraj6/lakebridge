@@ -26,6 +26,7 @@ from databricks.labs.lakebridge.deployment.configurator import ResourceConfigura
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerInstaller
 from databricks.labs.lakebridge.reconcile.constants import ReconSourceType, ReconReportType
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 from tests.unit.conftest import path_to_resource
 

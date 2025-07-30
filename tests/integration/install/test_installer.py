@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from databricks.labs.lakebridge.install import MavenInstaller, TranspilerRepository, WheelInstaller, WorkspaceInstaller
+from databricks.labs.lakebridge.install import MavenInstaller, WheelInstaller, WorkspaceInstaller
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 # TODO: These should run as part of the integration tests, not a separate test suite.
 
