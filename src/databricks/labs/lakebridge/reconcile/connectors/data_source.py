@@ -8,7 +8,6 @@ from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions,
 
 logger = logging.getLogger(__name__)
 
-
 class DataSource(ABC):
 
     @abstractmethod
@@ -30,6 +29,24 @@ class DataSource(ABC):
         table: str,
     ) -> list[Schema]:
         return NotImplemented
+
+    @abstractmethod
+    def normalize_identifier(self, identifier: str) -> str:
+        return NotImplemented
+
+    @staticmethod
+    def _add_backticks_for(identifier: str, start_delimiter: str, end_delimiter: str) -> str:
+        if DataSource._is_already_delimited(identifier, start_delimiter, end_delimiter):
+            stripped_identifier = (identifier
+                                   .removeprefix(start_delimiter)
+                                   .removesuffix(end_delimiter))
+        else:
+            stripped_identifier = identifier
+        return f"`{stripped_identifier}`"
+
+    @staticmethod
+    def _is_already_delimited(identifier: str, start_delimiter: str, end_delimiter: str) -> bool:
+        return identifier.startswith(start_delimiter) and identifier.endswith(end_delimiter)
 
     @classmethod
     def log_and_throw_exception(cls, exception: Exception, fetch_type: str, query: str):
@@ -70,3 +87,6 @@ class MockDataSource(DataSource):
         if not mock_schema:
             return self.log_and_throw_exception(self._exception, "schema", f"({catalog}, {schema}, {table})")
         return mock_schema
+
+    def normalize_identifier(self, identifier: str) -> str:
+        return identifier

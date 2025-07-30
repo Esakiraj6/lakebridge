@@ -171,3 +171,7 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
                 raise NotFound(message) from e
 
         return self._spark.read.format("snowflake").option("dbtable", f"({query}) as tmp").options(**options)
+
+    def normalize_identifier(self, identifier: str) -> str:
+        return DataSource._add_backticks_for(identifier, "\"\"", "\"\"")
+

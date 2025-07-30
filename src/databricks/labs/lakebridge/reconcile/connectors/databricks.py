@@ -85,3 +85,6 @@ class DatabricksDataSource(DataSource, SecretsMixin):
             return [Schema(field.col_name.lower(), field.data_type.lower()) for field in schema_metadata]
         except (RuntimeError, PySparkException) as e:
             return self.log_and_throw_exception(e, "schema", schema_query)
+
+    def normalize_identifier(self, identifier: str) -> str:
+        return DataSource._add_backticks_for(identifier, "`", "`")
