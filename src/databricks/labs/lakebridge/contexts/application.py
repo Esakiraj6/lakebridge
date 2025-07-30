@@ -22,6 +22,7 @@ from databricks.labs.lakebridge.helpers.metastore import CatalogOperations
 
 logger = logging.getLogger(__name__)
 
+
 # pylint: disable=too-many-public-methods
 class ApplicationContext:
     def __init__(self, ws: WorkspaceClient):
@@ -137,4 +138,3 @@ class ApplicationContext:
     def analyzer(self):
         is_debug = logger.getEffectiveLevel() == logging.DEBUG
         return LakebridgeAnalyzer(self.prompts, is_debug)
-

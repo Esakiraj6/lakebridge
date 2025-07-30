@@ -11,6 +11,7 @@ from databricks.labs.bladespector.analyzer import Analyzer
 
 # TODO: These should be moved to the integration tests.
 
+
 def test_analyze(mock_workspace_client, tmp_path: Path):
 
     supported_tech = sorted(Analyzer.supported_source_technologies(), key=str.casefold)

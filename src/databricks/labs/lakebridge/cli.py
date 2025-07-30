@@ -19,7 +19,6 @@ from databricks.labs.blueprint.entrypoint import get_logger, is_in_debug
 from databricks.labs.blueprint.installation import RootJsonValue
 from databricks.labs.blueprint.tui import Prompts
 
-from databricks.labs.bladespector.analyzer import Analyzer
 
 
 from databricks.labs.lakebridge.assessments.configure_assessment import (
