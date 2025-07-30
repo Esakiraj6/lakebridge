@@ -11,21 +11,22 @@ from databricks.labs.blueprint.installation import MockInstallation
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
 from databricks.labs.blueprint.tui import MockPrompts
+from databricks.labs.blueprint.wheels import ProductInfo, WheelsV2
 from databricks.labs.lakebridge.config import (
-    LakebridgeConfiguration,
-    ReconcileConfig,
     DatabaseConfig,
-    ReconcileMetadataConfig,
     LSPConfigOptionV1,
     LSPPromptMethod,
+    LakebridgeConfiguration,
+    ReconcileConfig,
+    ReconcileMetadataConfig,
+    TranspileConfig,
 )
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
-from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerInstaller, TranspilerRepository
-from databricks.labs.lakebridge.config import TranspileConfig
-from databricks.labs.blueprint.wheels import ProductInfo, WheelsV2
+from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerInstaller
 from databricks.labs.lakebridge.reconcile.constants import ReconSourceType, ReconReportType
+from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
 from tests.unit.conftest import path_to_resource
 
