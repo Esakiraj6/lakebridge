@@ -26,7 +26,7 @@ class NormalizeReconConfigService:
         self._normalize_transformations(escaped_table)
         self._normalize_col_thresholds(escaped_table)
 
-        escaped_table.is_columns_escaped = True
+        escaped_table.is_normalized = True
         return escaped_table
 
     def _normalize_sampling(self, table: Table):
