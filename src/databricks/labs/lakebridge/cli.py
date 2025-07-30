@@ -32,8 +32,7 @@ from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.helpers.recon_config_utils import ReconConfigPrompts
 from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
-from databricks.labs.lakebridge.install import WorkspaceInstaller
-from databricks.labs.lakebridge.install import TranspilerInstaller
+from databricks.labs.lakebridge.install import WorkspaceInstaller, TranspilerRepository
 from databricks.labs.lakebridge.reconcile.runner import ReconcileRunner
 from databricks.labs.lakebridge.lineage import lineage_generator
 from databricks.labs.lakebridge.reconcile.recon_config import RECONCILE_OPERATION_NAME, AGG_RECONCILE_OPERATION_NAME
@@ -54,7 +53,7 @@ def raise_validation_exception(msg: str) -> NoReturn:
     raise ValueError(msg)
 
 
-def _installer(ws: WorkspaceClient) -> WorkspaceInstaller:
+def _installer(ws: WorkspaceClient, transpiler_repository: TranspilerRepository) -> WorkspaceInstaller:
     app_context = ApplicationContext(_verify_workspace_client(ws))
     return WorkspaceInstaller(
         app_context.workspace_client,
@@ -64,6 +63,7 @@ def _installer(ws: WorkspaceClient) -> WorkspaceInstaller:
         app_context.product_info,
         app_context.resource_configurator,
         app_context.workspace_installation,
+        transpiler_repository=transpiler_repository,
     )
 
 
@@ -114,12 +114,13 @@ def transpile(
     skip_validation: str | None = None,
     catalog_name: str | None = None,
     schema_name: str | None = None,
+    transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
 ):
     """Transpiles source dialect to databricks dialect"""
     ctx = ApplicationContext(w)
     logger.debug(f"Preconfigured transpiler config: {ctx.transpile_config!r}")
     with_user_agent_extra("cmd", "execute-transpile")
-    checker = _TranspileConfigChecker(ctx.transpile_config, ctx.prompts)
+    checker = _TranspileConfigChecker(ctx.transpile_config, ctx.prompts, transpiler_repository)
     checker.use_transpiler_config_path(transpiler_config_path)
     checker.use_source_dialect(source_dialect)
     checker.use_input_source(input_source)
@@ -188,14 +189,19 @@ class _TranspileConfigChecker:
 
     _config: TranspileConfig
     """The workspace configuration for transpiling, updated from command-line arguments."""
-    # _engine: TranspileEngine | None
-    # """The transpiler engine to use for transpiling, lazily loaded based on the configuration."""
     _prompts: Prompts
     """Prompting system, for requesting configuration that hasn't been provided."""
     _source_dialect_override: str | None = None
     """The source dialect provided on the command-line, if any."""
+    _transpiler_repository: TranspilerRepository
+    """The repository where available transpilers are installed."""
 
-    def __init__(self, config: TranspileConfig | None, prompts: Prompts) -> None:
+    def __init__(
+        self,
+        config: TranspileConfig | None,
+        prompts: Prompts,
+        transpiler_repository: TranspilerRepository,
+    ) -> None:
         if config is None:
             logger.warning(
                 "No workspace transpile configuration, use 'install-transpile' to (re)install and configure; using defaults for now."
@@ -203,6 +209,7 @@ class _TranspileConfigChecker:
             config = TranspileConfig()
         self._config = config
         self._prompts = prompts
+        self._transpiler_repository = transpiler_repository
         self._source_dialect_override = None
 
     @staticmethod
@@ -334,7 +341,7 @@ class _TranspileConfigChecker:
     def _configure_transpiler_config_path(self, source_dialect: str) -> TranspileEngine | None:
         """Configure the transpiler config path based on the requested source dialect."""
         # Names of compatible transpiler engines for the given dialect.
-        compatible_transpilers = TranspilerInstaller.transpilers_with_dialect(source_dialect)
+        compatible_transpilers = self._transpiler_repository.transpilers_with_dialect(source_dialect)
         match len(compatible_transpilers):
             case 0:
                 # Nothing found for the specified dialect, fail.
@@ -349,7 +356,7 @@ class _TranspileConfigChecker:
                     f"Multiple transpilers available for dialect {source_dialect!r}: {compatible_transpilers!r}"
                 )
                 transpiler_name = self._prompts.choice("Select the transpiler:", list(compatible_transpilers))
-        transpiler_config_path = TranspilerInstaller.transpiler_config_path(transpiler_name)
+        transpiler_config_path = self._transpiler_repository.transpiler_config_path(transpiler_name)
         logger.info(f"Lakebridge will use the {transpiler_name} transpiler.")
         self._config = dataclasses.replace(self._config, transpiler_config_path=str(transpiler_config_path))
         return TranspileEngine.load_engine(transpiler_config_path)
@@ -361,7 +368,7 @@ class _TranspileConfigChecker:
         if engine is None:
             engine = self._configure_transpiler_config_path(source_dialect)
             if engine is None:
-                supported_dialects = ", ".join(TranspilerInstaller.all_dialects())
+                supported_dialects = ", ".join(self._transpiler_repository.all_dialects())
                 msg = f"{msg_prefix}: {source_dialect!r} (supported dialects: {supported_dialects})"
                 raise_validation_exception(msg)
         else:
@@ -375,7 +382,7 @@ class _TranspileConfigChecker:
 
     def _prompt_source_dialect(self) -> TranspileEngine:
         # This is similar to the post-install prompting for the source dialect.
-        supported_dialects = TranspilerInstaller.all_dialects()
+        supported_dialects = self._transpiler_repository.all_dialects()
         match len(supported_dialects):
             case 0:
                 msg = "No transpilers are available, install using 'install-transpile' or use --transpiler-conf-path'."
@@ -522,7 +529,7 @@ async def _transpile(ctx: ApplicationContext, config: TranspileConfig, engine: T
     return [status]
 
 
-def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[str, str] | None):
+def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[str, str] | None) -> None:
     """
     Override the Workspace client's SDK config with the user provided SDK config.
     Users can provide the cluster_id and warehouse_id during the installation.
@@ -541,7 +548,7 @@ def _override_workspace_client_config(ctx: ApplicationContext, overrides: dict[s
 
 
 @lakebridge.command
-def reconcile(w: WorkspaceClient):
+def reconcile(w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-reconcile")
     ctx = ApplicationContext(w)
@@ -557,7 +564,7 @@ def reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command
-def aggregates_reconcile(w: WorkspaceClient):
+def aggregates_reconcile(w: WorkspaceClient) -> None:
     """[EXPERIMENTAL] Reconciles Aggregated source to Databricks datasets"""
     with_user_agent_extra("cmd", "execute-aggregates-reconcile")
     ctx = ApplicationContext(w)
@@ -574,7 +581,13 @@ def aggregates_reconcile(w: WorkspaceClient):
 
 
 @lakebridge.command
-def generate_lineage(w: WorkspaceClient, *, source_dialect: str | None = None, input_source: str, output_folder: str):
+def generate_lineage(
+    w: WorkspaceClient,
+    *,
+    source_dialect: str | None = None,
+    input_source: str,
+    output_folder: str,
+) -> None:
     """[Experimental] Generates a lineage of source SQL files or folder"""
     ctx = ApplicationContext(w)
     logger.debug(f"User: {ctx.current_user}")
@@ -595,7 +608,7 @@ def generate_lineage(w: WorkspaceClient, *, source_dialect: str | None = None, i
 
 
 @lakebridge.command
-def configure_secrets(w: WorkspaceClient):
+def configure_secrets(w: WorkspaceClient) -> None:
     """Setup reconciliation connection profile details as Secrets on Databricks Workspace"""
     recon_conf = ReconConfigPrompts(w)
 
@@ -607,7 +620,7 @@ def configure_secrets(w: WorkspaceClient):
 
 
 @lakebridge.command(is_unauthenticated=True)
-def configure_database_profiler():
+def configure_database_profiler() -> None:
     """[Experimental] Install the lakebridge Assessment package"""
     prompts = Prompts()
 
@@ -622,19 +635,26 @@ def configure_database_profiler():
 
 
 @lakebridge.command()
-def install_transpile(w: WorkspaceClient, artifact: str | None = None):
+def install_transpile(
+    w: WorkspaceClient,
+    artifact: str | None = None,
+    transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
+) -> None:
     """Install the Lakebridge transpilers"""
     with_user_agent_extra("cmd", "install-transpile")
     if artifact:
         with_user_agent_extra("artifact-overload", Path(artifact).name)
     user = w.current_user
     logger.debug(f"User: {user}")
-    installer = _installer(w)
+    installer = _installer(w, transpiler_repository)
     installer.run(module="transpile", artifact=artifact)
 
 
 @lakebridge.command(is_unauthenticated=False)
-def configure_reconcile(w: WorkspaceClient):
+def configure_reconcile(
+    w: WorkspaceClient,
+    transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
+) -> None:
     """Configure the Lakebridge reconciliation module"""
     with_user_agent_extra("cmd", "configure-reconcile")
     user = w.current_user
@@ -643,12 +663,12 @@ def configure_reconcile(w: WorkspaceClient):
         dbsql_id = _create_warehouse(w)
         w.config.warehouse_id = dbsql_id
     logger.debug(f"Warehouse ID used for configuring reconcile: {w.config.warehouse_id}.")
-    installer = _installer(w)
+    installer = _installer(w, transpiler_repository)
     installer.run(module="reconcile")
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None):
+def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None) -> None:
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
