@@ -61,7 +61,7 @@ class WorkspaceInstallation:
         try:
             return self._installation.load(Version)
         except ResourceDoesNotExist:
-            logger.debug(f"No existing version found in workspace; assuming fresh installation.")
+            logger.debug("No existing version found in workspace; assuming fresh installation.")
             return None
 
     def _apply_upgrades(self):
