@@ -11,6 +11,9 @@ from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.bladespector.analyzer import Analyzer
 
 
+# TODO: These should be moved to the integration tests.
+
+
 def test_analyze():
     supported_tech = sorted(Analyzer.supported_source_technologies(), key=str.casefold)
     numbered_list = dict(enumerate(supported_tech))
