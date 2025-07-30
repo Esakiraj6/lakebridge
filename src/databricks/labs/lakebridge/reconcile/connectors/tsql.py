@@ -130,3 +130,6 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
 
     def reader(self, query: str, prepare_query_str="") -> DataFrameReader:
         return self._get_jdbc_reader(query, self.get_jdbc_url, self._DRIVER, prepare_query_str)
+
+    def normalize_identifier(self, identifier: str) -> str:
+        return DataSource._add_backticks_for(identifier, "[", "]")

@@ -106,3 +106,6 @@ class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
 
     def reader(self, query: str) -> DataFrameReader:
         return self._get_jdbc_reader(query, self.get_jdbc_url, OracleDataSource._DRIVER)
+
+    def normalize_identifier(self, identifier: str) -> str:
+        return DataSource._add_backticks_for(identifier, "\"", "\"")
