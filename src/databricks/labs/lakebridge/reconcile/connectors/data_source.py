@@ -37,8 +37,13 @@ class DataSource(ABC):
 
     @staticmethod
     def _add_backticks_for(identifier: str, start_delimiter: str, end_delimiter: str) -> str:
+        if identifier == "" or identifier is None:
+            return ""
+
         if DataSource._is_already_delimited(identifier, start_delimiter, end_delimiter):
             stripped_identifier = identifier.removeprefix(start_delimiter).removesuffix(end_delimiter)
+        elif DataSource._is_already_delimited(identifier, "`", "`"):
+            stripped_identifier = identifier[1:][:-1]
         else:
             stripped_identifier = identifier
         return f"`{stripped_identifier}`"
