@@ -14,7 +14,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileMetadataConfig,
     ReconcileConfig,
 )
-from databricks.labs.lakebridge.reconcile.reconcilation import Reconciliation
+from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.trigger_recon_service import TriggerReconService
 from databricks.labs.lakebridge.reconcile.utils import initialise_data_source, generate_volume_path
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
@@ -757,11 +757,12 @@ def test_recon_for_report_type_is_data(
     recon_schema, metrics_schema, details_schema = report_tables_schema
     table_recon, source, target, reconcile_config_data = mock_for_report_type_data
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -955,11 +956,12 @@ def test_recon_for_report_type_schema(
     recon_schema, metrics_schema, details_schema = report_tables_schema
     table_recon, source, target, reconcile_config_schema = mock_for_report_type_schema
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -1166,11 +1168,12 @@ def test_recon_for_report_type_all(
     table_recon, source, target, reconcile_config_all = mock_for_report_type_all
 
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -1441,11 +1444,12 @@ def test_recon_for_report_type_is_row(
     recon_schema, metrics_schema, details_schema = report_tables_schema
     source, target, table_recon, reconcile_config_row = mock_for_report_type_row
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -1590,11 +1594,12 @@ def test_schema_recon_with_data_source_exception(
     table_recon, source, target, reconcile_config_exception = mock_for_recon_exception
     reconcile_config_exception.report_type = "schema"
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -1663,17 +1668,20 @@ def test_schema_recon_with_general_exception(
     reconcile_config_schema.data_source = "snowflake"
     reconcile_config_schema.secret_scope = "remorph_snowflake"
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_schema") as schema_source_mock,
+        patch(
+            "databricks.labs.lakebridge.reconcile.reconciliation.Reconciliation.reconcile_schema"
+        ) as schema_source_mock,
         patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
@@ -1739,17 +1747,18 @@ def test_data_recon_with_general_exception(
     reconcile_config.secret_scope = "remorph_snowflake"
     reconcile_config.report_type = "data"
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_data") as data_source_mock,
+        patch("databricks.labs.lakebridge.reconcile.reconciliation.Reconciliation.reconcile_data") as data_source_mock,
         patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
@@ -1815,17 +1824,18 @@ def test_data_recon_with_source_exception(
     reconcile_config.secret_scope = "remorph_snowflake"
     reconcile_config.report_type = "data"
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_data") as data_source_mock,
+        patch("databricks.labs.lakebridge.reconcile.reconciliation.Reconciliation.reconcile_data") as data_source_mock,
         patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
@@ -1895,11 +1905,12 @@ def test_recon_for_wrong_report_type(mock_workspace_client, mock_spark, mock_for
     source, target, table_recon, reconcile_config = mock_for_report_type_row
     reconcile_config.report_type = "ro"
     with (
-        patch("databricks.labs.lakebridge.reconcile.execute.datetime") as mock_datetime,
+        patch("databricks.labs.lakebridge.reconcile.trigger_recon_service.datetime") as mock_datetime,
         patch("databricks.labs.lakebridge.reconcile.recon_capture.datetime") as recon_datetime,
-        patch("databricks.labs.lakebridge.reconcile.execute.initialise_data_source", return_value=(source, target)),
+        patch("databricks.labs.lakebridge.reconcile.utils.initialise_data_source", return_value=(source, target)),
         patch(
-            "databricks.labs.lakebridge.reconcile.execute.uuid4", return_value="00112233-4455-6677-8899-aabbccddeeff"
+            "databricks.labs.lakebridge.reconcile.trigger_recon_service.uuid4",
+            return_value="00112233-4455-6677-8899-aabbccddeeff",
         ),
         patch(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
@@ -1996,7 +2007,7 @@ def test_reconcile_data_with_threshold_and_row_report_type(
     assert actual.threshold_output.threshold_mismatch_count == 0
 
 
-@patch('databricks.labs.lakebridge.reconcile.execute.generate_final_reconcile_output')
+@patch('databricks.labs.lakebridge.reconcile.recon_capture.generate_final_reconcile_output')
 def test_recon_output_without_exception(mock_gen_final_recon_output):
     mock_workspace_client = MagicMock()
     mock_spark = MagicMock()
