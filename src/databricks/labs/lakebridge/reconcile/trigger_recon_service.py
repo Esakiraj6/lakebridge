@@ -22,7 +22,7 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
     SchemaReconcileOutput,
     DataReconcileOutput,
 )
-from databricks.labs.lakebridge.reconcile.reconcilation import Reconciliation
+from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
 from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
