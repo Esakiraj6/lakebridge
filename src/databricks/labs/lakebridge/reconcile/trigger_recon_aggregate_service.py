@@ -6,7 +6,6 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.lakebridge.config import ReconcileConfig, TableRecon
 from databricks.labs.lakebridge.reconcile import utils
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException, ReconciliationException
-from databricks.labs.lakebridge.reconcile.execute import Reconciliation
 from databricks.labs.lakebridge.reconcile.recon_capture import (
     ReconIntermediatePersist,
     generate_final_reconcile_aggregate_output,
@@ -17,21 +16,24 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
     AggregateQueryOutput,
     DataReconcileOutput,
 )
-from databricks.labs.lakebridge.reconcile.recon_service import ReconService
+from databricks.labs.lakebridge.reconcile.reconcilation import Reconciliation
+from databricks.labs.lakebridge.reconcile.trigger_recon_service import TriggerReconService
 from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
 
 
-class ReconAggregateService:
+class TriggerReconAggregateService:
     @staticmethod
-    def reconcile_aggregates(
+    def trigger_recon_aggregates(
         ws: WorkspaceClient,
         spark: SparkSession,
         table_recon: TableRecon,
         reconcile_config: ReconcileConfig,
         local_test_run: bool = False,
     ):
-        reconciler, recon_capture = ReconService.create_recon_dependencies(ws, spark, reconcile_config, local_test_run)
+        reconciler, recon_capture = TriggerReconService.create_recon_dependencies(
+            ws, spark, reconcile_config, local_test_run
+        )
 
         # Get the Aggregated Reconciliation Output for each table
         for table_conf in table_recon.tables:
@@ -52,7 +54,7 @@ class ReconAggregateService:
             assert normalized_table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
 
             table_reconcile_agg_output_list: list[AggregateQueryOutput] = (
-                ReconAggregateService._run_reconcile_aggregates(
+                TriggerReconAggregateService._run_reconcile_aggregates(
                     reconciler=reconciler,
                     table_conf=normalized_table_conf,
                     src_schema=src_schema,
@@ -76,7 +78,7 @@ class ReconAggregateService:
                 ).clean_unmatched_df_from_volume()
             )
 
-        return ReconService.verify_successful_reconciliation(
+        return TriggerReconService.verify_successful_reconciliation(
             generate_final_reconcile_aggregate_output(
                 recon_id=recon_capture.recon_id,
                 spark=spark,

@@ -10,7 +10,6 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.lakebridge.config import ReconcileConfig, TableRecon
 from databricks.labs.lakebridge.reconcile import utils
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException, ReconciliationException
-from databricks.labs.lakebridge.reconcile.execute import Reconciliation
 from databricks.labs.lakebridge.reconcile.recon_capture import (
     ReconCapture,
     ReconIntermediatePersist,
@@ -23,6 +22,7 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
     SchemaReconcileOutput,
     DataReconcileOutput,
 )
+from databricks.labs.lakebridge.reconcile.reconcilation import Reconciliation
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
 from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
 from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
@@ -33,22 +33,24 @@ logger = logging.getLogger(__name__)
 _RECON_REPORT_TYPES = {"schema", "data", "row", "all", "aggregate"}
 
 
-class ReconService:
+class TriggerReconService:
 
     @staticmethod
-    def recon_all(
+    def trigger_recon(
         ws: WorkspaceClient,
         spark: SparkSession,
         table_recon: TableRecon,
         reconcile_config: ReconcileConfig,
         local_test_run: bool = False,
     ) -> ReconcileOutput:
-        reconciler, recon_capture = ReconService.create_recon_dependencies(ws, spark, reconcile_config, local_test_run)
+        reconciler, recon_capture = TriggerReconService.create_recon_dependencies(
+            ws, spark, reconcile_config, local_test_run
+        )
 
         for table_conf in table_recon.tables:
-            ReconService.recon_one(spark, reconciler, recon_capture, reconcile_config, table_conf)
+            TriggerReconService.recon_one(spark, reconciler, recon_capture, reconcile_config, table_conf)
 
-        return ReconService.verify_successful_reconciliation(
+        return TriggerReconService.verify_successful_reconciliation(
             generate_final_reconcile_output(
                 recon_id=recon_capture.recon_id,
                 spark=spark,
@@ -113,11 +115,11 @@ class ReconService:
             reconciler.source, reconciler.target
         ).normalize_recon_table_config(table_conf)
 
-        schema_reconcile_output, data_reconcile_output, recon_process_duration = ReconService._do_recon_one(
+        schema_reconcile_output, data_reconcile_output, recon_process_duration = TriggerReconService._do_recon_one(
             reconciler, reconcile_config, normalized_table_conf
         )
 
-        ReconService.persist_delta_table(
+        TriggerReconService.persist_delta_table(
             spark,
             reconciler,
             recon_capture,
@@ -145,7 +147,7 @@ class ReconService:
             schema_reconcile_output = SchemaReconcileOutput(is_valid=False, exception=str(e))
         else:
             if reconciler.report_type in {"schema", "all"}:
-                schema_reconcile_output = ReconService._run_reconcile_schema(
+                schema_reconcile_output = TriggerReconService._run_reconcile_schema(
                     reconciler=reconciler,
                     table_conf=table_conf,
                     src_schema=src_schema,
@@ -154,7 +156,7 @@ class ReconService:
                 logger.warning("Schema comparison is completed.")
 
             if reconciler.report_type in {"data", "row", "all"}:
-                data_reconcile_output = ReconService._run_reconcile_data(
+                data_reconcile_output = TriggerReconService._run_reconcile_data(
                     reconciler=reconciler,
                     table_conf=table_conf,
                     src_schema=src_schema,
