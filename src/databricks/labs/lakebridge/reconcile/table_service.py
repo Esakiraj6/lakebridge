@@ -11,65 +11,66 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 
 
 class NormalizeReconConfigService:
-    def __init__(self, source: DataSource):
-        self.data_source = source
+    def __init__(self, source: DataSource, target: DataSource):
+        self.source = source
+        self.target = source
 
     def normalize_recon_table_config(self, table: Table) -> Table:
-        escaped_table = dataclasses.replace(table)
+        normalized_table = dataclasses.replace(table)
 
-        self._normalize_sampling(escaped_table)
-        self._normalize_aggs(escaped_table)
-        self._normalize_join_cols(escaped_table)
-        self._normalize_select_cols(escaped_table)
-        self._normalize_drop_cols(escaped_table)
-        self._normalize_col_mappings(escaped_table)
-        self._normalize_transformations(escaped_table)
-        self._normalize_col_thresholds(escaped_table)
+        self._normalize_sampling(normalized_table)
+        self._normalize_aggs(normalized_table)
+        self._normalize_join_cols(normalized_table)
+        self._normalize_select_cols(normalized_table)
+        self._normalize_drop_cols(normalized_table)
+        self._normalize_col_mappings(normalized_table)
+        self._normalize_transformations(normalized_table)
+        self._normalize_col_thresholds(normalized_table)
+        self._normalize_jdbc_options(normalized_table)
 
-        escaped_table.is_normalized = True
-        return escaped_table
+        return normalized_table
 
     def _normalize_sampling(self, table: Table):
         if table.sampling_options:
-            escaped_sampling = dataclasses.replace(table.sampling_options)
-            escaped_sampling.stratified_columns = (
-                [self.data_source.normalize_identifier(c) for c in escaped_sampling.stratified_columns]
-                if escaped_sampling.stratified_columns
+            normalized_sampling = dataclasses.replace(table.sampling_options)
+            normalized_sampling.stratified_columns = (
+                [self.source.normalize_identifier(c) for c in normalized_sampling.stratified_columns]
+                if normalized_sampling.stratified_columns
                 else None
             )
-            table.sampling_options = escaped_sampling
+            table.sampling_options = normalized_sampling
         return table
 
     def _normalize_aggs(self, table: Table):
-        escaped = [self._normalize_agg(a) for a in table.aggregates] if table.aggregates else None
-        table.aggregates = escaped
+        normalized = [self._normalize_agg(a) for a in table.aggregates] if table.aggregates else None
+        table.aggregates = normalized
         return table
 
     def _normalize_agg(self, agg: Aggregate) -> Aggregate:
-        escaped = dataclasses.replace(agg)
-        escaped.agg_columns = [self.data_source.normalize_identifier(c) for c in escaped.agg_columns]
-        escaped.group_by_columns = (
-            [self.data_source.normalize_identifier(c) for c in escaped.group_by_columns]
-            if escaped.group_by_columns
+        normalized = dataclasses.replace(agg)
+        normalized.agg_columns = [self.source.normalize_identifier(c) for c in normalized.agg_columns]
+        normalized.group_by_columns = (
+            [self.source.normalize_identifier(c) for c in normalized.group_by_columns]
+            if normalized.group_by_columns
             else None
         )
-        return escaped
+        return normalized
 
     def _normalize_join_cols(self, table: Table):
         table.join_columns = (
-            [self.data_source.normalize_identifier(c) for c in table.join_columns] if table.join_columns else None
+            [self.source.normalize_identifier(c) for c in table.join_columns] if table.join_columns else None
         )
         return table
 
     def _normalize_select_cols(self, table: Table):
         table.select_columns = (
-            [self.data_source.normalize_identifier(c) for c in table.select_columns] if table.select_columns else None
+            [self.source.normalize_identifier(c) for c in table.select_columns] if table.select_columns else None
         )
         return table
 
     def _normalize_drop_cols(self, table: Table):
         table.drop_columns = (
-            [self.data_source.normalize_identifier(c) for c in table.drop_columns] if table.drop_columns else None
+            [self.source.normalize_identifier(c) for c in table.drop_columns] if table.drop_columns else None
         )
         return table
 
@@ -81,8 +82,8 @@ class NormalizeReconConfigService:
 
     def _normalize_col_mapping(self, mapping: ColumnMapping):
         return ColumnMapping(
-            source_name=self.data_source.normalize_identifier(mapping.source_name),
-            target_name=self.data_source.normalize_identifier(mapping.target_name),
+            source_name=self.source.normalize_identifier(mapping.source_name),
+            target_name=self.target.normalize_identifier(mapping.target_name),
         )
 
     def _normalize_transformations(self, table: Table):
@@ -91,10 +92,11 @@ class NormalizeReconConfigService:
         )
         return table
 
+    # TODO handle source and target
     def _normalize_transformation(self, transform: Transformation):
-        escaped = dataclasses.replace(transform)
-        escaped.column_name = self.data_source.normalize_identifier(transform.column_name)
-        return escaped
+        normalized = dataclasses.replace(transform)
+        normalized.column_name = self.source.normalize_identifier(transform.column_name)
+        return normalized
 
     def _normalize_col_thresholds(self, table: Table):
         table.column_thresholds = (
@@ -103,10 +105,16 @@ class NormalizeReconConfigService:
         return table
 
     def _normalize_col_threshold(self, threshold: ColumnThresholds):
-        escaped = dataclasses.replace(threshold)
-        escaped.column_name = self.data_source.normalize_identifier(threshold.column_name)
-        return escaped
+        normalized = dataclasses.replace(threshold)
+        normalized.column_name = self.source.normalize_identifier(threshold.column_name)
+        return normalized
 
     # TODO implement
     def _normalize_filters(self, table: Table):
+        return table
+
+    def _normalize_jdbc_options(self, table: Table):
+        normalized = dataclasses.replace(table.jdbc_reader_options) if table.jdbc_reader_options else None
+        normalized.partition_column = self.source.normalize_identifier(normalized.partition_column)
+        table.jdbc_reader_options = normalized
         return table

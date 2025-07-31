@@ -189,7 +189,6 @@ class Table:
     column_thresholds: list[ColumnThresholds] | None = None
     filters: Filters | None = None
     table_thresholds: list[TableThresholds] | None = None
-    is_normalized: bool = False
 
     def __post_init__(self):
         self.source_name = self.source_name.lower()
