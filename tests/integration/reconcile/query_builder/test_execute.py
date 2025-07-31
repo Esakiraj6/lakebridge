@@ -238,7 +238,7 @@ def test_reconcile_data_with_mismatches_and_missing(
     schema_comparator = SchemaCompare(mock_spark)
     source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
-    with patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)):
+    with patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)):
         actual_data_reconcile = Reconciliation(
             source,
             target,
@@ -444,7 +444,7 @@ def test_reconcile_data_without_mismatches_and_missing(
     schema_comparator = SchemaCompare(mock_spark)
     source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
-    with patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)):
+    with patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)):
         actual = Reconciliation(
             source,
             target,
@@ -522,7 +522,7 @@ def test_reconcile_data_with_mismatch_and_no_missing(
     schema_comparator = SchemaCompare(mock_spark)
     source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
-    with patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)):
+    with patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)):
         actual = Reconciliation(
             source,
             target,
@@ -624,7 +624,7 @@ def test_reconcile_data_missing_and_no_mismatch(
     schema_comparator = SchemaCompare(mock_spark)
     source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
-    with patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)):
+    with patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)):
         actual = Reconciliation(
             source,
             target,
@@ -767,7 +767,7 @@ def test_recon_for_report_type_is_data(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=11111,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
     ):
         mock_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
         recon_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
@@ -965,7 +965,7 @@ def test_recon_for_report_type_schema(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=22222,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
     ):
         mock_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
         recon_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
@@ -1176,7 +1176,7 @@ def test_recon_for_report_type_all(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
     ):
         mock_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
         recon_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
@@ -1451,7 +1451,7 @@ def test_recon_for_report_type_is_row(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
     ):
         mock_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
         recon_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
@@ -1600,7 +1600,7 @@ def test_schema_recon_with_data_source_exception(
             "databricks.labs.lakebridge.reconcile.recon_capture.ReconCapture._generate_recon_main_id",
             return_value=33333,
         ),
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
         mock_datetime.now.return_value = datetime(2024, 5, 23, 9, 21, 25, 122185)
@@ -1674,7 +1674,7 @@ def test_schema_recon_with_general_exception(
             return_value=33333,
         ),
         patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_schema") as schema_source_mock,
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
         schema_source_mock.side_effect = PySparkException("Unknown Error")
@@ -1750,7 +1750,7 @@ def test_data_recon_with_general_exception(
             return_value=33333,
         ),
         patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_data") as data_source_mock,
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
         data_source_mock.side_effect = DataSourceRuntimeException("Unknown Error")
@@ -1826,7 +1826,7 @@ def test_data_recon_with_source_exception(
             return_value=33333,
         ),
         patch("databricks.labs.lakebridge.reconcile.execute.Reconciliation.reconcile_data") as data_source_mock,
-        patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)),
+        patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)),
         pytest.raises(ReconciliationException, match="00112233-4455-6677-8899-aabbccddeeff"),
     ):
         data_source_mock.side_effect = DataSourceRuntimeException("Source Runtime Error")
@@ -1977,7 +1977,7 @@ def test_reconcile_data_with_threshold_and_row_report_type(
     source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
 
-    with patch("databricks.labs.lakebridge.reconcile.execute.generate_volume_path", return_value=str(tmp_path)):
+    with patch("databricks.labs.lakebridge.reconcile.utils.generate_volume_path", return_value=str(tmp_path)):
         actual = Reconciliation(
             source,
             target,
