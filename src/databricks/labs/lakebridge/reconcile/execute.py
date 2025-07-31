@@ -195,7 +195,7 @@ def recon(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
-    table_service = NormalizeReconConfigService(source=source)
+    table_service = NormalizeReconConfigService(source=source, target=target)
 
     recon_id = str(uuid4())
     # initialise the Reconciliation
@@ -365,7 +365,7 @@ def reconcile_aggregates(
         ws=ws_client,
         secret_scope=reconcile_config.secret_scope,
     )
-    table_service = NormalizeReconConfigService(source=source)
+    table_service = NormalizeReconConfigService(source=source, target=target)
 
     # Generate Unique recon_id for every run
     recon_id = str(uuid4())

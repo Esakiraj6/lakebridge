@@ -176,10 +176,11 @@ def test_get_schema_exception_handling():
     ):
         ords.get_schema(None, "data", "employee")
 
+
 def test_normalize_identifier():
     engine, spark, ws, scope = initial_setup()
     data_source = OracleDataSource(engine, spark, ws, scope)
 
     assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("\"col1\"") == "`col1`" # Oracle delimiter
-    assert data_source.normalize_identifier("`col1`") == "`col1`" # ANSI SQL delimiter
+    assert data_source.normalize_identifier("\"col1\"") == "`col1`"  # Oracle delimiter
+    assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter

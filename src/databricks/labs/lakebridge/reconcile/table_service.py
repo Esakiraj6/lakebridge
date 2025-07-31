@@ -13,7 +13,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 class NormalizeReconConfigService:
     def __init__(self, source: DataSource, target: DataSource):
         self.source = source
-        self.target = source
+        self.target = target
 
     def normalize_recon_table_config(self, table: Table) -> Table:
         normalized_table = dataclasses.replace(table)
@@ -114,7 +114,11 @@ class NormalizeReconConfigService:
         return table
 
     def _normalize_jdbc_options(self, table: Table):
-        normalized = dataclasses.replace(table.jdbc_reader_options) if table.jdbc_reader_options else None
-        normalized.partition_column = self.source.normalize_identifier(normalized.partition_column)
-        table.jdbc_reader_options = normalized
+        if table.jdbc_reader_options:
+            normalized = dataclasses.replace(table.jdbc_reader_options)
+            normalized.partition_column = (
+                self.source.normalize_identifier(normalized.partition_column) if normalized.partition_column else None
+            )
+            table.jdbc_reader_options = normalized
+
         return table
