@@ -1,5 +1,5 @@
 ---
-title: BladeBridge Configurations
+title: Extending BladeBridge Configurations
 sidebar_position: 4
 ---
 
@@ -8,28 +8,71 @@ import CodeBlock from '@theme/CodeBlock';
 
 ## Overview
 
-While the **BladeBridge** converter comes as a standalone executable, its operation relies heavily on rules defined inside configuration files provided with the converter.  These configurations are comprised of a set of layered json files and code templates that drive the generation of output files and application of conversion rules.
+The **BladeBridge** transpiler relies heavily on rules defined inside configuration files provided with the converter.
+These configurations are comprised of a set of layered json files and code templates that drive the generation of output
+files and application of conversion rules.
 
-Similar configuration concepts are applicable across all BladeBridge converters, although the structure of SQL-to-SQL configuration files and ETL-to-Pyspark/SparkSQL/DBSQL is somewhat different, since ETL conversions typically deal with both the ETL logic translations, as well as the translation of embedded SQL statements (sourcing data, pre/post/inline SQL statements)
+Similar configuration concepts are applicable across all BladeBridge conversion paths, although the structure of SQL-to-SQL
+configuration files and ETL-to-Pyspark/SparkSQL/DBSQL is somewhat different, since ETL conversions typically deal with
+both the ETL logic translations, as well as the translation of embedded SQL statements (sourcing data, pre/post/inline
+SQL statements)
 
-## Rationale for Understanding the Configuration Files
-
-In some migration projects, users may want to deviate from the conversion rules provided by BladeBridge.  For this reason, engineers should know how to:
+In some migration projects, users may want to augment/override the conversion rules provided with the BladeBridge converter.
+For this reason, engineers should know how to:
 - Extend the converter logic
 - Provide your own conversion rules
 - Custom-control the output
 - Troubleshoot issues
 
+In this page, we'll provide you with the information necessary to do just that.
 
 ## Supplying Custom Configuration File
-When running the Bladebridge converter from Lakebridge, a custom configuration file can be supplied to the converter in case custom rules or new technology support is required.  In order to register a custom configuration file for transpilation, we need to execute the `install-transpile` command and at one of the prompts specify the custom configuration file path:
+When running the Bladebridge converter from Lakebridge, a custom configuration file can be supplied to the converter.
+ In order to register a custom configuration file for transpilation,
+ we need to execute the `install-transpile` command and at one of the prompts specify the custom configuration file path:
 ```bash
 databricks labs lakebridge install-transpile
 Do you want to override the existing installation? (default: no): yes
-Specify the config file to override the default[Bladebridge] config - press <enter> for none (default: <none>): <local_full_path>/custom_<source>2databricks.json
+Specify the config file to override the default[Bladebridge] config - press <enter> for none (default: <none>):
+<local_full_path>/custom_<source>2databricks.json
 ```
 
-Please read the subsequent sections of this document to learn how to create and extend Bladebridge configurations
+Please read the subsequent sections of this document to learn how to create and extend BladeBridge configurations
+
+## Creating the custom configuration file
+If you want to start from scratch and only use your new custom file, but not the provided configurations, go ahead and
+create an empty .json file and specify the configurations needed following the guidance in the following sections.
+
+If instead you want to augment and/or override the existing configurations:
+- Take note of where the provided configurations are:
+```<user_home_directory>/.databricks./labs/remorph-transpilers/bladebridge/lib/.venv/lib/python3.10/site-packages/databricks/labs/bladebridge/Converter/Configs```
+
+- In your new configuration file, you need to specify that this files inherits from the supplied configuration. This
+enables layered rule definitions and promotes reuse and consistency across configurations.
+
+    `inherit_from` is an array pointing to JSON filenames that the current file inherits from. Multiple file inheritances
+are allowed. If the full path is supplied with a forward slash, then the converter will try to read the file specified
+with the full path. Otherwise, the converter will look for the file in the same folder as the current JSON file.
+
+    Example:
+    ```json
+    "inherit_from":["/Users/user.name/.databricks/labs/remorph-transpilers/bladebridge/lib/.venv/lib/python3.10/site-packages/databricks/labs/bladebridge/Converter/Configs/base_oracle2databricks_sql.json"]
+    ```
+
+```
+    Name of the various files per source you might want to inherit from:
+      - INFAPC:
+          - Target SPARKSQL: "final_infapc2sparksql.json",
+          - Target PYSPARK : "final_infapc2pyspark.json"
+      - DATASTAGE:
+          - Target SPARKSQL : "final_datastage2sparksql.json",
+          - Target PYSPARK : "final_datastage2pyspark.json"
+      - SYNAPSE: "base_synapse2databricks_sql.json"
+      - ORACLE:  "base_oracle2databricks_sql.json"
+      - MSSQL: "base_sqlserver2databricks_sql.json"
+      - NETEZZA: "netezza2sparksql.json"
+      - TERADATA "teradata2databricks_sql_main.json"
+```
 
 
 ## Basic Converter Rules
@@ -82,14 +125,14 @@ Points to an array of substitution instructions to be performed on a single line
 
 **Example:**
 
-- **Source:**  
+- **Source:**
   `#my_var# + 10 + p_curr_date_of_month`
 
-- **Rule:**  
+- **Rule:**
   ```json
   {"from": "#(\\w+)#", "to": "${$1}", "upcase_string": true}
 
-- **Result:**  
+- **Result:**
   `${MY_VAR} + 10 + p_curr_date_of_month`
 
 
@@ -115,14 +158,14 @@ Each element of the rules array is a structure with the following elements.
 
 **Example:**
 
-- **Source:**  
+- **Source:**
   `SELECT V_TOTAL = COUNT(*) FROM orders;`
 
-- **Rule:**  
+- **Rule:**
   ```json
   {"from" : "\bSELECT\s+(V_\w+)\s*\=(.*)\;", "to" : "SET $1 = (SELECT $2 limit 1);"}
 
-- **Result:**  
+- **Result:**
   `SET V_TOTAL = (SELECT COUNT(*) FROM orders limit 1);
 `
 
@@ -160,7 +203,7 @@ Each element of the array is a structure with the following elements.
 
 **\_\_BLANK\_\_** - blanks out the entire call including the function name.
 
-Example (removing INDEX clause): 
+Example (removing INDEX clause):
 ```json
 {"from": "INDEX", "to": "__BLANK__", "statement_categories" : ["TABLE_DDL","TABLE_DDL_LIKE","TABLE_DDL_AS_SELECT"]},
 ```
@@ -178,34 +221,19 @@ SELECT SUBSTR(
 
 
 
-**\_\_ELIMINATE_CALL\_\_** - gets rid of the function name and surrounding parenthesis, leaving only the arguments in place.  
+**\_\_ELIMINATE_CALL\_\_** - gets rid of the function name and surrounding parenthesis, leaving only the arguments in place.
 
-Example (removing TRANSLATE call and leaving args): 
+Example (removing TRANSLATE call and leaving args):
 ```json
 {"from": "TRANSLATE", "to" : "__ELIMINATE_CALL__"}, //get rid of the function call with the parens, but leave the inner part
 ```
 
 ## Extended Converter Rules
 
-### inherit_from
-
-In real-world scenarios, it is often necessary to inherit rules or settings from shared configuration files into more specific ones. To support this, you can use the inherit_from directive, which allows a configuration file to reference a base or parent file. This enables layered rule definitions and promotes reuse and consistency across configurations.
-
-
-`inherit_from` is an array pointing to JSON filenames that the current file inherits from. Multiple file inheritances are allowed. If the full path is supplied with a forward slash, then the converter will try to read the file specified with the full path. Otherwise, the converter will look for the file in the same folder as the current JSON file. 
-
-Example:
-```json
-"inherit_from":["general_sql_specs.json", "c:/Work/myProjects/project.json"]
-```
-
-Currently, all the SQL dialect configuration files (e.g. teradata, oracle, snowflake etc...) inherit from the file *general_sql_specs.json*
-
-
 ### stmt_categorization_patterns
 As the converter processes statements, in some cases it needs to be aware of the type of the statement being processed, so he can include/exclude some rules or dispatch the processing to a custom routine.
 
-`stmt_categorization_patterns` is an array of entries that associate a coding pattern to the category. 
+`stmt_categorization_patterns` is an array of entries that associate a coding pattern to the category.
 
 Example:
 ```json
@@ -434,10 +462,10 @@ ETL configuration thus serves as the orchestration layer that combines rule-base
 | table_creation_statement                      | Template for creating a temporary table from a SQL block.                              | %TABLE_NAME% = spark.sql (rf\"\"\"%INNER_SQL%\"\"\"%FORMAT_SPEC%)<br/> %TABLE_NAME%. createOrReplaceTempView(\"`%TABLE_NAME%`\")  |
 | ddl_statement_wrap                            | Wraps DDL statements in a Spark SQL invocation.                                        | spark.sql(f"""%INNER_SQL%"""%FORMAT_SPEC%).display()                   |
 | etl_converter_config_file                     | Points to a secondary config file for ETL expression conversion.                       | infa2databricks.json                                                   |
-| commands | section on how to generate various read and write statements for different system types | 
-| system_type_class | system type classifications | 
+| commands | section on how to generate various read and write statements for different system types |
+| system_type_class | system type classifications |
 | conform_source_columns | instructs the writer to generate column-conforming statement for sources |
-| conform_columns_call_template | template for conforming the column list | "%DF%_conformed_cols = \[%COLUMN_LIST%\]\n%DF% = DatabricksConversionSupplements. conform_df_columns(%DF%,%DF%_conformed_cols) | 
+| conform_columns_call_template | template for conforming the column list | "%DF%_conformed_cols = \[%COLUMN_LIST%\]\n%DF% = DatabricksConversionSupplements. conform_df_columns(%DF%,%DF%_conformed_cols) |
 | mapplet_class_name              | Class name used for mapplet functions                                                            | Mapplets                                   |
 | mapplet_function_name           | Function name format for mapplets                                                                | %MAPPLET_NAME%                             |
 | mapplet_code_indent             | General code indentation for mapplets                                                            |          (8 spaces)                        |
