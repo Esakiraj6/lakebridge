@@ -86,7 +86,7 @@ CREATE TABLE <lakebridge_catalog>.<lakebridge_schema>.table_recon_summary (
 | **schema_status**     | The status of the schema level validation.                                         |
 | **error**             | The error message, if any, during the validation.                                  |
 
-## Notebook Details
+## [Notebook Details](#notebook-details)
 
 import LakebridgeTabs from '@site/src/components/ReconcileTabs';
 
@@ -123,7 +123,7 @@ To run the utility, the following parameters must be set:
 ## Points to Note
 
 The notebook `<source_system>_transformation_query_generator` needs to be created or modified as per the customer's source system
-The following rules are applied while performing validation. This can be customized as per customer's use case by doing the necessary changes in the Notebook lakebridge_recon_main
+The following rules are applied while performing validation. This can be customized as per customer's use case by doing the necessary changes in the [notebook](#notebook-details)
 - Given that the data types across platform would vary and fail the schema level checks, the overall validation will still be marked as passed based on the row and column level checks.
 - In case the primary keys are not configured in the table_configs, only row level checks will be performed to pass the validation.
 
