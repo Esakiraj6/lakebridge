@@ -37,10 +37,10 @@ Analyzer will control execution flow by dynamically requesting configuration par
 Analyzer accepts as an input a folder name containing the files and subfolders to be scanned, and the Excel report filename to be generated, containing all the collected information.
 
 Below is the detailed explanation on the inputs required for Analyzer.
-- `Source directory [Required]` - Absolute folder path containing the legacy artifacts.
+- `Source directory [Optional]` - Absolute folder path containing the legacy artifacts.
 - `Report file name [Optional]` - Enter a custom report name or path if you want to save the analysis report in a different location from the source directory. **IMPORTANT**: Provide the full path + filename without extension - ensure the target directory exists beforehand.
-- `Source technology [Required]` - Select the underlying technology platform of the source files being analyzed.
-#### Before starting the execution, Analyzer will prompt for the type of technology it is scanning
+- `Source technology [Optional]` - Select the underlying technology platform of the source files being analyzed.
+#### If no arguments are passed, Analyzer will prompt for the Source directory, Report file name and Source Technology.
 
 ## Execution
 Execute the below command to initialize the analyze process.
