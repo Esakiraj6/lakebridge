@@ -431,7 +431,7 @@ class _TranspileConfigChecker:
         if transpiler_config_path is not None:
             self._validate_transpiler_config_path(
                 transpiler_config_path,
-                f"Invalid transpiler path configured, path does not exist: {transpiler_config_path}",
+                f"Error: Invalid value for '--transpiler-config-path': '{str(transpiler_config_path)}', file does not exist."
             )
             path = Path(transpiler_config_path)
             engine = LSPEngine.from_config_path(path)
