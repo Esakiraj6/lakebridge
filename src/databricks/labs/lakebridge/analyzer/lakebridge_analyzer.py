@@ -37,8 +37,8 @@ class LakebridgeAnalyzer(Analyzer):
             else Path(filename).with_suffix(".xlsx")
         )
 
-    def run_analyzer(self):
-        """Run the analyzer."""
+    def _run_prompt_analyzer(self):
+        """Run the analyzer: prompt guided"""
         directory = self._get_source_directory()
         result = self._get_result_file_path(directory)
 
@@ -48,3 +48,19 @@ class LakebridgeAnalyzer(Analyzer):
         self._run_binary(directory, result, technology, self._is_debug)
 
         logger.info(f"Successfully Analyzed files in ${directory} for ${technology} and saved report to {result}")
+
+    def run_analyzer(
+        self, source_dir: str | None = None, results_dir: str | None = None, technology: str | None = None
+    ):
+        """Run the analyzer."""
+        params = (source_dir, results_dir, technology)
+
+        if all(param is None for param in params):
+            self._run_prompt_analyzer()
+            return
+
+        if source_dir is None or results_dir is None or technology is None:
+            logger.error("All arguments (--source-directory, --report-file, --source-tech) must be provided")
+            return
+
+        self.analyze(Path(source_dir), Path(results_dir), technology, self._is_debug)

@@ -666,13 +666,18 @@ def configure_reconcile(
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient):
+def analyze(
+    w: WorkspaceClient,
+    source_directory: str | None = None,
+    report_file: str | None = None,
+    source_tech: str | None = None,
+):
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
 
     logger.debug(f"User: {ctx.current_user}")
-    ctx.analyzer.run_analyzer()
+    ctx.analyzer.run_analyzer(source_directory, report_file, source_tech)
 
 
 if __name__ == "__main__":
