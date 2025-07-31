@@ -1,12 +1,13 @@
 import logging
-import sys
 import os
-from datetime import datetime
-from uuid import uuid4
+import sys
 
-from pyspark.errors import PySparkException
 from pyspark.sql import DataFrame, SparkSession
 from sqlglot import Dialect
+
+from databricks.connect import DatabricksSession
+from databricks.labs.blueprint.installation import Installation
+from databricks.sdk import WorkspaceClient
 
 from databricks.labs.lakebridge.config import (
     DatabaseConfig,
@@ -14,9 +15,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileConfig,
     ReconcileMetadataConfig,
 )
-from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
-from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
-from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
+from databricks.labs.lakebridge.reconcile import utils
 from databricks.labs.lakebridge.reconcile.compare import (
     capture_mismatch_data_and_columns,
     reconcile_data,
@@ -24,10 +23,8 @@ from databricks.labs.lakebridge.reconcile.compare import (
     reconcile_agg_data_per_rule,
 )
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
-from databricks.labs.lakebridge.reconcile.connectors.source_adapter import create_adapter
 from databricks.labs.lakebridge.reconcile.exception import (
     DataSourceRuntimeException,
-    InvalidInputException,
     ReconciliationException,
 )
 from databricks.labs.lakebridge.reconcile.query_builder.aggregate_query import AggregateQueryBuilder
@@ -39,12 +36,7 @@ from databricks.labs.lakebridge.reconcile.query_builder.sampling_query import (
 from databricks.labs.lakebridge.reconcile.query_builder.threshold_query import (
     ThresholdQueryBuilder,
 )
-from databricks.labs.lakebridge.reconcile.recon_capture import (
-    ReconCapture,
-    generate_final_reconcile_output,
-    ReconIntermediatePersist,
-    generate_final_reconcile_aggregate_output,
-)
+from databricks.labs.lakebridge.reconcile.recon_aggregate_service import ReconAggregateService
 from databricks.labs.lakebridge.reconcile.recon_config import (
     Schema,
     Table,
@@ -55,29 +47,17 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 )
 from databricks.labs.lakebridge.reconcile.recon_output_config import (
     DataReconcileOutput,
-    ReconcileOutput,
-    ReconcileProcessDuration,
-    SchemaReconcileOutput,
     ThresholdOutput,
     ReconcileRecordCount,
     AggregateQueryOutput,
 )
+from databricks.labs.lakebridge.reconcile.recon_service import ReconService
 from databricks.labs.lakebridge.reconcile.sampler import SamplerFactory
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
-from databricks.labs.lakebridge.transpiler.execute import verify_workspace_client
-from databricks.sdk import WorkspaceClient
-from databricks.labs.blueprint.installation import Installation
-from databricks.connect import DatabricksSession
+from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 
 logger = logging.getLogger(__name__)
 _SAMPLE_ROWS = 50
-
-
-def validate_input(input_value: str, list_of_value: set, message: str):
-    if input_value not in list_of_value:
-        error_message = f"{message} --> {input_value} is not one of {list_of_value}"
-        logger.error(error_message)
-        raise InvalidInputException(error_message)
 
 
 def main(*argv) -> None:
@@ -120,7 +100,7 @@ def _trigger_recon(
     reconcile_config: ReconcileConfig,
 ):
     try:
-        recon_output = recon(
+        recon_output = ReconService.recon_all(
             ws=w,
             spark=DatabricksSession.builder.getOrCreate(),
             table_recon=table_recon,
@@ -156,7 +136,8 @@ def _trigger_reconcile_aggregates(
       after logging the error details.
     """
     try:
-        recon_output = reconcile_aggregates(
+        reconcile_config.report_type = "aggregate"
+        recon_output = ReconAggregateService.reconcile_aggregates(
             ws=ws,
             spark=DatabricksSession.builder.getOrCreate(),
             table_recon=table_recon,
@@ -167,154 +148,6 @@ def _trigger_reconcile_aggregates(
     except ReconciliationException as e:
         logger.error(f"Error while running aggregate reconcile: {str(e)}")
         raise e
-
-
-def recon(
-    ws: WorkspaceClient,
-    spark: SparkSession,
-    table_recon: TableRecon,
-    reconcile_config: ReconcileConfig,
-    local_test_run: bool = False,
-) -> ReconcileOutput:
-    """[EXPERIMENTAL] Reconcile the data between the source and target tables."""
-    # verify the workspace client and add proper product and version details
-    # TODO For now we are utilising the
-    #  verify_workspace_client from transpile/execute.py file. Later verify_workspace_client function has to be
-    #  refactored
-
-    ws_client: WorkspaceClient = verify_workspace_client(ws)
-
-    # validate the report type
-    report_type = reconcile_config.report_type.lower()
-    logger.info(f"report_type: {report_type}, data_source: {reconcile_config.data_source} ")
-    validate_input(report_type, {"schema", "data", "row", "all"}, "Invalid report type")
-
-    source, target = initialise_data_source(
-        engine=get_dialect(reconcile_config.data_source),
-        spark=spark,
-        ws=ws_client,
-        secret_scope=reconcile_config.secret_scope,
-    )
-    table_service = NormalizeReconConfigService(source=source, target=target)
-
-    recon_id = str(uuid4())
-    # initialise the Reconciliation
-    reconciler = Reconciliation(
-        source,
-        target,
-        reconcile_config.database_config,
-        report_type,
-        SchemaCompare(spark=spark),
-        get_dialect(reconcile_config.data_source),
-        spark,
-        metadata_config=reconcile_config.metadata_config,
-    )
-
-    # initialise the recon capture class
-    recon_capture = ReconCapture(
-        database_config=reconcile_config.database_config,
-        recon_id=recon_id,
-        report_type=report_type,
-        source_dialect=get_dialect(reconcile_config.data_source),
-        ws=ws_client,
-        spark=spark,
-        metadata_config=reconcile_config.metadata_config,
-        local_test_run=local_test_run,
-    )
-
-    for table_conf in table_recon.tables:
-        normalized_table_conf = table_service.normalize_recon_table_config(table_conf)
-        recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
-        schema_reconcile_output = SchemaReconcileOutput(is_valid=True)
-        data_reconcile_output = DataReconcileOutput()
-        try:
-            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
-                source=source,
-                target=target,
-                table_conf=normalized_table_conf,
-                database_config=reconcile_config.database_config,
-            )
-        except DataSourceRuntimeException as e:
-            schema_reconcile_output = SchemaReconcileOutput(is_valid=False, exception=str(e))
-        else:
-            if report_type in {"schema", "all"}:
-                schema_reconcile_output = _run_reconcile_schema(
-                    reconciler=reconciler,
-                    table_conf=normalized_table_conf,
-                    src_schema=src_schema,
-                    tgt_schema=tgt_schema,
-                )
-                logger.warning("Schema comparison is completed.")
-
-            if report_type in {"data", "row", "all"}:
-                data_reconcile_output = _run_reconcile_data(
-                    reconciler=reconciler,
-                    table_conf=normalized_table_conf,
-                    src_schema=src_schema,
-                    tgt_schema=tgt_schema,
-                )
-                logger.warning(f"Reconciliation for '{report_type}' report completed.")
-
-        recon_process_duration.end_ts = str(datetime.now())
-        # Persist the data to the delta tables
-        recon_capture.start(
-            data_reconcile_output=data_reconcile_output,
-            schema_reconcile_output=schema_reconcile_output,
-            table_conf=normalized_table_conf,
-            recon_process_duration=recon_process_duration,
-            record_count=reconciler.get_record_count(normalized_table_conf, report_type),
-        )
-        if report_type != "schema":
-            ReconIntermediatePersist(
-                spark=spark, path=generate_volume_path(normalized_table_conf, reconcile_config.metadata_config)
-            ).clean_unmatched_df_from_volume()
-
-    return _verify_successful_reconciliation(
-        generate_final_reconcile_output(
-            recon_id=recon_id,
-            spark=spark,
-            metadata_config=reconcile_config.metadata_config,
-            local_test_run=local_test_run,
-        )
-    )
-
-
-def _verify_successful_reconciliation(
-    reconcile_output: ReconcileOutput, operation_name: str = "reconcile"
-) -> ReconcileOutput:
-    for table_output in reconcile_output.results:
-        if table_output.exception_message or (
-            table_output.status.column is False
-            or table_output.status.row is False
-            or table_output.status.schema is False
-            or table_output.status.aggregate is False
-        ):
-            raise ReconciliationException(
-                f" Reconciliation failed for one or more tables. Please check the recon metrics for more details."
-                f" **{operation_name}** failed.",
-                reconcile_output=reconcile_output,
-            )
-
-    logger.info("Reconciliation completed successfully.")
-    return reconcile_output
-
-
-def generate_volume_path(table_conf: Table, metadata_config: ReconcileMetadataConfig):
-    catalog = metadata_config.catalog
-    schema = metadata_config.schema
-    return f"/Volumes/{catalog}/{schema}/{metadata_config.volume}/{table_conf.source_name}_{table_conf.target_name}/"
-
-
-def initialise_data_source(
-    ws: WorkspaceClient,
-    spark: SparkSession,
-    engine: Dialect,
-    secret_scope: str,
-):
-    source = create_adapter(engine=engine, spark=spark, ws=ws, secret_scope=secret_scope)
-    target = create_adapter(engine=get_dialect("databricks"), spark=spark, ws=ws, secret_scope=secret_scope)
-
-    return source, target
 
 
 def _get_missing_data(
@@ -332,115 +165,6 @@ def _get_missing_data(
         table=table_name,
         query=sample_query,
         options=None,
-    )
-
-
-def reconcile_aggregates(
-    ws: WorkspaceClient,
-    spark: SparkSession,
-    table_recon: TableRecon,
-    reconcile_config: ReconcileConfig,
-    local_test_run: bool = False,
-):
-    """[EXPERIMENTAL] Reconcile the aggregated data between the source and target tables.
-    for e.g., COUNT, SUM, AVG of columns between source and target with or without any specific key/group by columns
-    Supported Aggregate functions: MIN, MAX, COUNT, SUM, AVG, MEAN, MODE, PERCENTILE, STDDEV, VARIANCE, MEDIAN
-    """
-    # verify the workspace client and add proper product and version details
-    # TODO For now we are utilising the
-    #  verify_workspace_client from transpile/execute.py file. Later verify_workspace_client function has to be
-    #  refactored
-
-    ws_client: WorkspaceClient = verify_workspace_client(ws)
-
-    report_type = ""
-    if report_type:
-        logger.info(f"report_type: {report_type}")
-    logger.info(f"data_source: {reconcile_config.data_source}")
-
-    # Read the reconcile_config and initialise the source and target data sources. Target is always Databricks
-    source, target = initialise_data_source(
-        engine=get_dialect(reconcile_config.data_source),
-        spark=spark,
-        ws=ws_client,
-        secret_scope=reconcile_config.secret_scope,
-    )
-    table_service = NormalizeReconConfigService(source=source, target=target)
-
-    # Generate Unique recon_id for every run
-    recon_id = str(uuid4())
-
-    # initialise the Reconciliation
-    reconciler = Reconciliation(
-        source,
-        target,
-        reconcile_config.database_config,
-        report_type,
-        SchemaCompare(spark=spark),
-        get_dialect(reconcile_config.data_source),
-        spark,
-        metadata_config=reconcile_config.metadata_config,
-    )
-
-    # initialise the recon capture class
-    recon_capture = ReconCapture(
-        database_config=reconcile_config.database_config,
-        recon_id=recon_id,
-        report_type=report_type,
-        source_dialect=get_dialect(reconcile_config.data_source),
-        ws=ws_client,
-        spark=spark,
-        metadata_config=reconcile_config.metadata_config,
-        local_test_run=local_test_run,
-    )
-
-    # Get the Aggregated Reconciliation Output for each table
-    for table_conf in table_recon.tables:
-        normalized_table_conf = table_service.normalize_recon_table_config(table_conf)
-        recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
-        try:
-            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
-                source=source,
-                target=target,
-                table_conf=normalized_table_conf,
-                database_config=reconcile_config.database_config,
-            )
-        except DataSourceRuntimeException as e:
-            raise ReconciliationException(message=str(e)) from e
-
-        assert normalized_table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
-
-        table_reconcile_agg_output_list: list[AggregateQueryOutput] = _run_reconcile_aggregates(
-            reconciler=reconciler,
-            table_conf=normalized_table_conf,
-            src_schema=src_schema,
-            tgt_schema=tgt_schema,
-        )
-
-        recon_process_duration.end_ts = str(datetime.now())
-
-        # Persist the data to the delta tables
-        recon_capture.store_aggregates_metrics(
-            reconcile_agg_output_list=table_reconcile_agg_output_list,
-            table_conf=normalized_table_conf,
-            recon_process_duration=recon_process_duration,
-        )
-
-        (
-            ReconIntermediatePersist(
-                spark=spark,
-                path=generate_volume_path(normalized_table_conf, reconcile_config.metadata_config),
-            ).clean_unmatched_df_from_volume()
-        )
-
-    return _verify_successful_reconciliation(
-        generate_final_reconcile_aggregate_output(
-            recon_id=recon_id,
-            spark=spark,
-            metadata_config=reconcile_config.metadata_config,
-            local_test_run=local_test_run,
-        ),
-        operation_name=AGG_RECONCILE_OPERATION_NAME,
     )
 
 
@@ -466,6 +190,18 @@ class Reconciliation:
         self._source_engine = source_engine
         self._spark = spark
         self._metadata_config = metadata_config
+
+    @property
+    def source(self) -> DataSource:
+        return self._source
+
+    @property
+    def target(self) -> DataSource:
+        return self._target
+
+    @property
+    def report_type(self) -> str:
+        return self._report_type
 
     def reconcile_data(
         self,
@@ -528,7 +264,7 @@ class Reconciliation:
             options=table_conf.jdbc_reader_options,
         )
 
-        volume_path = generate_volume_path(table_conf, self._metadata_config)
+        volume_path = utils.generate_volume_path(table_conf, self._metadata_config)
         return reconcile_data(
             source=src_data,
             target=tgt_data,
@@ -616,7 +352,7 @@ class Reconciliation:
             self._target_engine,
         ).build_queries()
 
-        volume_path = generate_volume_path(table_conf, self._metadata_config)
+        volume_path = utils.generate_volume_path(table_conf, self._metadata_config)
 
         table_agg_output: list[AggregateQueryOutput] = []
 
@@ -871,42 +607,6 @@ class Reconciliation:
 
             return ReconcileRecordCount(source=int(source_count), target=int(target_count))
         return ReconcileRecordCount()
-
-
-def _run_reconcile_data(
-    reconciler: Reconciliation,
-    table_conf: Table,
-    src_schema: list[Schema],
-    tgt_schema: list[Schema],
-) -> DataReconcileOutput:
-    try:
-        return reconciler.reconcile_data(table_conf=table_conf, src_schema=src_schema, tgt_schema=tgt_schema)
-    except DataSourceRuntimeException as e:
-        return DataReconcileOutput(exception=str(e))
-
-
-def _run_reconcile_schema(
-    reconciler: Reconciliation,
-    table_conf: Table,
-    src_schema: list[Schema],
-    tgt_schema: list[Schema],
-):
-    try:
-        return reconciler.reconcile_schema(table_conf=table_conf, src_schema=src_schema, tgt_schema=tgt_schema)
-    except PySparkException as e:
-        return SchemaReconcileOutput(is_valid=False, exception=str(e))
-
-
-def _run_reconcile_aggregates(
-    reconciler: Reconciliation,
-    table_conf: Table,
-    src_schema: list[Schema],
-    tgt_schema: list[Schema],
-) -> list[AggregateQueryOutput]:
-    try:
-        return reconciler.reconcile_aggregates(table_conf, src_schema, tgt_schema)
-    except DataSourceRuntimeException as e:
-        return [AggregateQueryOutput(reconcile_output=DataReconcileOutput(exception=str(e)), rule=None)]
 
 
 if __name__ == "__main__":
