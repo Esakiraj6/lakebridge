@@ -1,24 +1,23 @@
 import re
 import abc
 import dataclasses
-import shutil
-from json import loads, dump
 import logging
 import os
+import shutil
+import sys
+import webbrowser
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from json import loads, dump
+from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run, CalledProcessError
-import sys
 from typing import Any, cast
 from urllib import request
 from urllib.error import URLError, HTTPError
-import webbrowser
-from datetime import datetime, timezone
-from pathlib import Path
-import xml.etree.ElementTree as ET
 from zipfile import ZipFile
 
-from databricks.labs.blueprint.installation import Installation, JsonValue
-from databricks.labs.blueprint.installation import SerdeError
+from databricks.labs.blueprint.installation import Installation, JsonValue, SerdeError
 from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.tui import Prompts
 from databricks.labs.blueprint.wheels import ProductInfo
@@ -26,11 +25,11 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound, PermissionDenied
 
 from databricks.labs.lakebridge.config import (
-    TranspileConfig,
-    ReconcileConfig,
     DatabaseConfig,
+    ReconcileConfig,
     LakebridgeConfiguration,
     ReconcileMetadataConfig,
+    TranspileConfig,
 )
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
