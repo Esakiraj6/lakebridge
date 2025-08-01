@@ -125,6 +125,9 @@ class WheelInstaller(TranspilerInstaller):
         self._product_path = self._repository.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if self._product_path.exists():
+            logger.debug(
+                f"Backing up existing {self._product_name} installation: {self._product_path} -> {backup_path}"
+            )
             os.rename(self._product_path, backup_path)
         self._install_path = self._product_path / "lib"
         self._install_path.mkdir(parents=True, exist_ok=True)
@@ -136,8 +139,12 @@ class WheelInstaller(TranspilerInstaller):
             return result
         except (CalledProcessError, ValueError) as e:
             logger.error(f"Failed to install {self._pypi_name} v{version}", exc_info=e)
+            logger.debug(f"Removing path for failed {self._product_name} installation: {self._product_path}")
             rmtree(self._product_path)
             if backup_path.exists():
+                logger.debug(
+                    f"Restoring previous {self._product_name} installation: {backup_path} -> {self._product_path}"
+                )
                 os.rename(backup_path, self._product_path)
             return None
 
