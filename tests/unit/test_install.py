@@ -55,6 +55,20 @@ PATH_TO_TRANSPILER_CONFIG = "/some/path/to/config.yml"
 def ws_installer() -> Generator[Callable[..., WorkspaceInstaller], None, None]:
 
     class TestWorkspaceInstaller(WorkspaceInstaller):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Ensure that the transpiler repository is mocked for unit tests instead of being the real thing.
+            if self._transpiler_repository == TranspilerRepository.user_home():
+                self._transpiler_repository = create_autospec(TranspilerRepository)
+
+        def install_bladebridge(self, artifact: Path | None = None) -> None:
+            # Ensure that unit tests do not attempt to install BladeBridge
+            pass
+
+        def install_morpheus(self, artifact: Path | None = None) -> None:
+            # Ensure that unit tests do not attempt to install Morpheus
+            pass
+
         def _all_installed_dialects(self):
             return ALL_INSTALLED_DIALECTS_NO_LATER
 
