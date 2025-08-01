@@ -398,10 +398,10 @@ class MavenInstaller(TranspilerInstaller):
     def _unsafe_install_version(self, version: str) -> bool:
         jar_file_path = self._install_path / f"{self._artifact_id}.jar"
         if self._artifact:
-            logger.debug(f"Copying '{self._artifact!s}' to '{jar_file_path!s}'")
+            logger.debug(f"Copying: {self._artifact} -> {jar_file_path}")
             shutil.copyfile(self._artifact, jar_file_path)
         elif not self.download_artifact_from_maven(self._group_id, self._artifact_id, version, jar_file_path):
-            logger.error(f"Failed to install Databricks {self._product_name} transpiler v{version}")
+            logger.error(f"Failed to install Databricks {self._product_name} transpiler (v{version})")
             return False
         self._copy_lsp_config(jar_file_path)
         return True
