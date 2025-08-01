@@ -94,7 +94,7 @@ async def test_installs_and_runs_local_bladebridge(
     output_folder = tmp_path / "output_folder"
     WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin", bladebridge_artifact).install()
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
-    lsp_engine = TranspileEngine.load_engine(config_path)
+    lsp_engine = LSPEngine.from_config_path(config_path)
     transpile_config = TranspileConfig(
         transpiler_config_path=str(config_path),
         source_dialect="oracle",
@@ -117,7 +117,7 @@ async def test_installs_and_runs_pypi_bladebridge(transpiler_repository: Transpi
     output_folder = tmp_path / "output_folder"
     WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin").install()
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
-    engine = TranspileEngine.load_engine(config_path)
+    engine = LSPEngine.from_config_path(config_path)
     transpile_config = TranspileConfig(
         transpiler_config_path=str(config_path),
         source_dialect="oracle",
