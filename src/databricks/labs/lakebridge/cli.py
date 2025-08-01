@@ -426,7 +426,7 @@ class _TranspileConfigChecker:
         #
 
         # Step 1: Check the transpiler config path.
-        engine: TranspileEngine | None = None
+        engine: TranspileEngine | None
         transpiler_config_path = self._config.transpiler_config_path
         if transpiler_config_path is not None:
             self._validate_transpiler_config_path(
@@ -435,6 +435,8 @@ class _TranspileConfigChecker:
             )
             path = Path(transpiler_config_path)
             engine = LSPEngine.from_config_path(path)
+        else:
+            engine = None
         del transpiler_config_path
 
         # Step 2: Check the source dialect, assuming it has been specified, and infer the transpiler config path if necessary.
