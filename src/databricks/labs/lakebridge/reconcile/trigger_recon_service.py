@@ -7,8 +7,9 @@ from pyspark.sql import SparkSession
 
 from databricks.sdk import WorkspaceClient
 
-from databricks.labs.lakebridge.config import ReconcileConfig, TableRecon
+from databricks.labs.lakebridge.config import ReconcileConfig, TableRecon, DatabaseConfig
 from databricks.labs.lakebridge.reconcile import utils
+from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException, ReconciliationException
 from databricks.labs.lakebridge.reconcile.recon_capture import (
     ReconCapture,
@@ -24,8 +25,6 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
 )
 from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
-from databricks.labs.lakebridge.reconcile.schema_service import SchemaService
-from databricks.labs.lakebridge.reconcile.table_service import NormalizeReconConfigService
 from databricks.labs.lakebridge.transpiler.execute import verify_workspace_client
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 
@@ -111,12 +110,9 @@ class TriggerReconService:
         reconcile_config: ReconcileConfig,
         table_conf: Table,
     ):
-        normalized_table_conf = NormalizeReconConfigService(
-            reconciler.source, reconciler.target
-        ).normalize_recon_table_config(table_conf)
 
         schema_reconcile_output, data_reconcile_output, recon_process_duration = TriggerReconService._do_recon_one(
-            reconciler, reconcile_config, normalized_table_conf
+            reconciler, reconcile_config, table_conf
         )
 
         TriggerReconService.persist_delta_table(
@@ -126,7 +122,7 @@ class TriggerReconService:
             schema_reconcile_output,
             data_reconcile_output,
             reconcile_config,
-            normalized_table_conf,
+            table_conf,
             recon_process_duration,
         )
 
@@ -137,11 +133,8 @@ class TriggerReconService:
         data_reconcile_output = DataReconcileOutput()
 
         try:
-            src_schema, tgt_schema = SchemaService.get_normalized_schemas(
-                source=reconciler.source,
-                target=reconciler.target,
-                table_conf=table_conf,
-                database_config=reconcile_config.database_config,
+            src_schema, tgt_schema = TriggerReconService.get_schemas(
+                reconciler.source, reconciler.target, table_conf, reconcile_config.database_config
             )
         except DataSourceRuntimeException as e:
             schema_reconcile_output = SchemaReconcileOutput(is_valid=False, exception=str(e))
@@ -166,6 +159,27 @@ class TriggerReconService:
 
         recon_process_duration.end_ts = str(datetime.now())
         return schema_reconcile_output, data_reconcile_output, recon_process_duration
+
+    @staticmethod
+    def get_schemas(
+        source: DataSource,
+        target: DataSource,
+        table_conf: Table,
+        database_config: DatabaseConfig,
+    ) -> tuple[list[Schema], list[Schema]]:
+        src_schema = source.get_schema(
+            catalog=database_config.source_catalog,
+            schema=database_config.source_schema,
+            table=table_conf.source_name,
+        )
+
+        tgt_schema = target.get_schema(
+            catalog=database_config.target_catalog,
+            schema=database_config.target_schema,
+            table=table_conf.target_name,
+        )
+
+        return src_schema, tgt_schema
 
     @staticmethod
     def _run_reconcile_schema(
