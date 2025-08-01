@@ -184,6 +184,7 @@ class WheelInstaller(TranspilerInstaller):
             self._venv_exec_cmd,
             "-m",
             "pip",
+            "--disable-pip-version-check",
             "install",
             to_install,
         ]
