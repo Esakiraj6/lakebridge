@@ -35,6 +35,7 @@ def _get_schema_query(catalog: str, schema: str, table: str):
 
 
 class DatabricksDataSource(DataSource, SecretsMixin):
+    _IDENTIFIER_DELIMITER = "`"
 
     def __init__(
         self,
@@ -87,4 +88,8 @@ class DatabricksDataSource(DataSource, SecretsMixin):
             return self.log_and_throw_exception(e, "schema", schema_query)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(identifier, "`", "`")
+        return DataSource._ansi_normalize_identifier(
+            identifier,
+            source_start_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,
+            source_end_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,
+        )

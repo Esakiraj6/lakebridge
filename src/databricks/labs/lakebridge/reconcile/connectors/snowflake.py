@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     _DRIVER = "snowflake"
+    _IDENTIFIER_DELIMITER = "\""
+
     """
        * INFORMATION_SCHEMA:
           - see https://docs.snowflake.com/en/sql-reference/info-schema#considerations-for-replacing-show-commands-with-information-schema-views
@@ -173,4 +175,8 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._spark.read.format("snowflake").option("dbtable", f"({query}) as tmp").options(**options)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(identifier, "\"", "\"")
+        return DataSource._ansi_normalize_identifier(
+            identifier,
+            source_start_delimiter=SnowflakeDataSource._IDENTIFIER_DELIMITER,
+            source_end_delimiter=SnowflakeDataSource._IDENTIFIER_DELIMITER,
+        )

@@ -49,6 +49,7 @@ _SCHEMA_QUERY = """SELECT
 
 class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     _DRIVER = "sqlserver"
+    _IDENTIFIER_DELIMITER = {"prefix": "[", "suffix": "]"}
 
     def __init__(
         self,
@@ -132,4 +133,8 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._get_jdbc_reader(query, self.get_jdbc_url, self._DRIVER, prepare_query_str)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(identifier, "[", "]")
+        return DataSource._ansi_normalize_identifier(
+            identifier,
+            source_start_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"],
+            source_end_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"],
+        )

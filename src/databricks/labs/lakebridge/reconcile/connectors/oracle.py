@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     _DRIVER = "oracle"
+    _IDENTIFIER_DELIMITER = "\""
     _SCHEMA_QUERY = """select column_name, case when (data_precision is not null
                                               and data_scale <> 0)
                                               then data_type || '(' || data_precision || ',' || data_scale || ')'
@@ -108,4 +109,8 @@ class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._get_jdbc_reader(query, self.get_jdbc_url, OracleDataSource._DRIVER)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(identifier, "\"", "\"")
+        return DataSource._ansi_normalize_identifier(
+            identifier,
+            source_start_delimiter=OracleDataSource._IDENTIFIER_DELIMITER,
+            source_end_delimiter=OracleDataSource._IDENTIFIER_DELIMITER,
+        )
