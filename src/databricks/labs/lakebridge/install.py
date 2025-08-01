@@ -134,12 +134,19 @@ class WheelInstaller(TranspilerInstaller):
             if backup_path.exists():
                 rmtree(backup_path)
             return result
-        except (CalledProcessError, ValueError) as e:
+        except CalledProcessError as e:
+            # Warning: if you end up here under the IntelliJ/PyCharm debugger, it can be because the debugger is
+            # trying to inject itself into the subprocess. Try disabling:
+            #   Settings | Build, Execution, Deployment | Python Debugger | Attach to subprocess automatically while debugging
             logger.error(f"Failed to install {self._pypi_name} v{version}", exc_info=e)
-            rmtree(self._product_path)
-            if backup_path.exists():
-                os.rename(backup_path, self._product_path)
-            return None
+            logger.debug(f"Output (stdout) from failed install command: {e.stdout.decode('utf-8', errors='replace')}")
+            logger.debug(f"Output (stderr) from failed install command: {e.stderr.decode('utf-8', errors='replace')}")
+        except ValueError as e:
+            logger.error(f"Failed to install {self._pypi_name} v{version}", exc_info=e)
+        rmtree(self._product_path)
+        if backup_path.exists():
+            os.rename(backup_path, self._product_path)
+        return None
 
     def _unsafe_install_latest_version(self, version: str) -> Path | None:
         self._create_venv()
