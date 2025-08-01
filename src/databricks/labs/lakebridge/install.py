@@ -125,6 +125,9 @@ class WheelInstaller(TranspilerInstaller):
         self._product_path = self._repository.transpilers_path() / self._product_name
         backup_path = Path(f"{self._product_path!s}-saved")
         if self._product_path.exists():
+            if backup_path.exists():
+                logger.debug(f"Existing backup of {self._product_name} installation found, removing: {backup_path}")
+                rmtree(backup_path)
             logger.debug(
                 f"Backing up existing {self._product_name} installation: {self._product_path} -> {backup_path}"
             )
