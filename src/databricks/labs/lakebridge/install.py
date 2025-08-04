@@ -8,7 +8,7 @@ import os
 from shutil import rmtree, move
 from subprocess import run, CalledProcessError
 import sys
-from typing import Any, cast
+from typing import Any, Literal, cast
 from urllib import request
 from urllib.error import URLError, HTTPError
 import webbrowser
@@ -41,6 +41,61 @@ from databricks.labs.lakebridge.transpiler.repository import TranspilerRepositor
 logger = logging.getLogger(__name__)
 
 TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
+
+
+class _PathBackup:
+    """A context manager to preserve a path before performing an operation, and optionally restore it afterwards."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._backup_path: Path | None = None
+        self._finished = False
+
+    def __enter__(self) -> "_PathBackup":
+        self.start()
+        return self
+
+    def start(self) -> None:
+        """Start the backup process by creating a backup of the path, if it already exists."""
+        backup_path = self._path.with_name(f"{self._path.name}-saved")
+        if backup_path.exists():
+            logger.debug(f"Existing backup found, removing: {backup_path}")
+            rmtree(backup_path)
+        if self._path.exists():
+            logger.debug(f"Backing up existing path: {self._path} -> {backup_path}")
+            os.rename(self._path, backup_path)
+            self._backup_path = backup_path
+        else:
+            self._backup_path = None
+
+    def rollback(self) -> None:
+        """Rollback the operation by restoring the backup path, if it exists."""
+        assert not self._finished, "Can only rollback/commit once."
+        logger.debug(f"Removing path: {self._path}")
+        rmtree(self._path)
+        if self._backup_path is not None:
+            logger.debug(f"Restoring previous path: {self._backup_path} -> {self._path}")
+            os.rename(self._backup_path, self._path)
+            self._backup_path = None
+        self._finished = True
+
+    def commit(self) -> None:
+        """Commit the operation by removing the backup path, if it exists."""
+        assert not self._finished, "Can only rollback/commit once."
+        if self._backup_path is not None:
+            logger.debug(f"Removing backup path: {self._backup_path}")
+            rmtree(self._backup_path)
+            self._backup_path = None
+        self._finished = True
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
+        if not self._finished:
+            # Automatically commit or rollback based on whether an exception is underway.
+            if exc_val is None:
+                self.commit()
+            else:
+                self.rollback()
+        return False  # Do not suppress any exception underway
 
 
 class TranspilerInstaller(abc.ABC):
@@ -87,35 +142,21 @@ class TranspilerInstaller(abc.ABC):
         """Install a specific version of the transpiler, with backup handling."""
         logger.info(f"Installing Databricks {self._product_name} transpiler (v{version})")
         product_path = self._repository.transpilers_path() / self._product_name
-        backup_path: Path | None = product_path.with_name(f"{product_path.name}-saved")
-        assert backup_path is not None
-        if backup_path.exists():
-            logger.debug(f"Existing backup of {self._product_name} installation found, removing: {backup_path}")
-            rmtree(backup_path)
-        if product_path.exists():
-            logger.debug(f"Backing up existing {self._product_name} installation: {product_path} -> {backup_path}")
-            os.rename(product_path, backup_path)
-        else:
-            backup_path = None
-        self._install_path = product_path / "lib"
-        self._install_path.mkdir(parents=True, exist_ok=True)
-        try:
-            result = self._install_version(version)
-        except (CalledProcessError, KeyError, ValueError) as e:
-            logger.error(f"Failed to install {self._product_name} transpiler (v{version})", exc_info=e)
-            result = False
-        if result:
-            logger.info(f"Successfully installed {self._product_name} transpiler (v{version})")
-            self._store_product_state(product_path=product_path, version=version)
-            if backup_path is not None:
-                rmtree(backup_path)
-            self._product_path = product_path
-            return product_path
-        logger.debug(f"Removing path for failed {self._product_name} installation: {product_path}")
-        rmtree(product_path)
-        if backup_path is not None:
-            logger.debug(f"Restoring previous {self._product_name} installation: {backup_path} -> {product_path}")
-            os.rename(backup_path, product_path)
+        with _PathBackup(product_path) as backup:
+            self._install_path = product_path / "lib"
+            self._install_path.mkdir(parents=True, exist_ok=True)
+            try:
+                result = self._install_version(version)
+            except (CalledProcessError, KeyError, ValueError) as e:
+                logger.error(f"Failed to install {self._product_name} transpiler (v{version})", exc_info=e)
+                result = False
+            if result:
+                logger.info(f"Successfully installed {self._product_name} transpiler (v{version})")
+                self._store_product_state(product_path=product_path, version=version)
+                backup.commit()
+                self._product_path = product_path
+                return product_path
+            backup.rollback()
         return None
 
     @abc.abstractmethod
