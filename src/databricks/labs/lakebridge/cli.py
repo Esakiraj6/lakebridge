@@ -19,7 +19,6 @@ from databricks.labs.blueprint.entrypoint import get_logger, is_in_debug
 from databricks.labs.blueprint.installation import RootJsonValue
 from databricks.labs.blueprint.tui import Prompts
 
-from databricks.labs.bladespector.analyzer import Analyzer
 
 
 from databricks.labs.lakebridge.assessments.configure_assessment import (
@@ -668,23 +667,18 @@ def configure_reconcile(
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None) -> None:
+def analyze(
+    w: WorkspaceClient,
+    source_directory: str | None = None,
+    report_file: str | None = None,
+    source_tech: str | None = None,
+):
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
-    prompts = ctx.prompts
-    output_file = report_file
-    input_folder = source_directory
-    if source_tech is None:
-        source_tech = prompts.choice("Select the source technology", Analyzer.supported_source_technologies())
-    with_user_agent_extra("analyzer_source_tech", make_alphanum_or_semver(source_tech))
-    user = ctx.current_user
-    logger.debug(f"User: {user}")
-    is_debug = logger.getEffectiveLevel() == logging.DEBUG
-    Analyzer.analyze(Path(input_folder), Path(output_file), source_tech, is_debug=is_debug)
-    logger.info(
-        f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}"
-    )
+
+    logger.debug(f"User: {ctx.current_user}")
+    ctx.analyzer.run_analyzer(source_directory, report_file, source_tech)
 
 
 if __name__ == "__main__":
