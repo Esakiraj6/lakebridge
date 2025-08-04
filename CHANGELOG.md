@@ -1,5 +1,65 @@
 # Version changelog
 
+## # Lakebridge Release v0.10.6  Notes
+
+## Analyzer
+
+- **Informatica Workflow Variable Collection**  
+    The Informatica analyzer now collects workflow variables, enhancing downstream conversion and mapping flows.  
+## Converters improvements
+
+## Morpheus
+    
+- Expanded SQL parser for Snowflake supports full `IF...ELSEIF...ELSE` and `ELSE IF` constructs, recognizes `ELSEIF` as a keyword, and strengthens test coverage.
+    
+- Improvements in Snowflake `CREATE PROCEDURE` grammar, including: simplified syntax, handling of optional queries, result set variables, and better exception handling.
+    
+- Support for `TEMPORARY` as an interchangeable keyword for temporary objects in Snowflake parsing.
+    
+## BladeBridge
+
+- **Enhanced SQL Scripting for Oracle Procedures**  
+    Multiple fixes for procedure conversion, including quoted identifiers, Japanese character support, misplaced/duplicated keywords, improved `SELECT INTO`, and more.  
+    
+- **Datastage PXPivot Conversion**  
+    Datastage’s vertical pivot (PXPivot) can now be converted to Databricks SQL, broadening ETL migration.  
+    
+- **Synapse and MS SQL Configuration Improvements**
+    
+    - Enhanced fragment breaker for standalone SELECTs
+    - Improved logic and ordering for variable declarations and set operators
+    - Bugfixes for `PROC_FINISH`, WITH statement handling, and universal ETL+SQL testing  
+        
+- **Overrides-file Prompt Update**  
+    More descriptive and clear prompt for the ‘overrides-file’ option in CLI and documentation.  
+    
+- **Bug Fixes & Minor Enhancements**
+    
+    - Datastage IF/THEN/ELSE and header row handling improvements  
+    - TRY/CATCH and improved `SELECT INTO #table` conversion  
+    - Better handling of set operations in SELECT/WITH  
+    - Standardized JSON configuration naming: now uses `base_<source>2databricks_<sql|sparksql|pyspark>.json`  
+    - DELETE-to-MERGE conversion, more tests, correct semicolon placement, and expanded handling of SQL scripting features  
+
+## Documentation
+
+- **Significant Improvements:**
+    - Expanded BladeBridge and overall configuration docs, with clear instructions for extending logic, using overrides, managing outputs, and troubleshooting.
+    - Updated guide on reconciling config and leveraging new CLI options.
+        
+
+## General
+
+- **Security & Infrastructure Enhancements**
+    
+    - Addressed CVE-2025-7339 (HTTP header manipulation vulnerability) by updating the `on-headers` dependency.
+    - Refined handling of output folders, error files, and configuration management for reliability.
+    - Improved reconcile dashboard deployment reliability—folders without a `dashboard.yml` are no longer deployed.
+    - Suppressed spurious warnings on initial installation; only debug messages are now logged for clean setups.
+    - Improved encoding handling and end-to-end test coverage for non-UTF-8 files and edge-case encodings.
+
+
+
 ## 0.10.5
 
 ## Converters improvements

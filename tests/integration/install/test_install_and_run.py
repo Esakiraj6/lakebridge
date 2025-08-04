@@ -97,7 +97,7 @@ async def test_installs_and_runs_local_bladebridge(
     ).install()
     assert location is not None
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
-    lsp_engine = TranspileEngine.load_engine(config_path)
+    lsp_engine = LSPEngine.from_config_path(config_path)
     transpile_config = TranspileConfig(
         transpiler_config_path=str(config_path),
         source_dialect="oracle",
@@ -121,7 +121,7 @@ async def test_installs_and_runs_pypi_bladebridge(transpiler_repository: Transpi
     location = WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin").install()
     assert location is not None
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
-    engine = TranspileEngine.load_engine(config_path)
+    engine = LSPEngine.from_config_path(config_path)
     transpile_config = TranspileConfig(
         transpiler_config_path=str(config_path),
         source_dialect="oracle",

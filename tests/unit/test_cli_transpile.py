@@ -202,7 +202,7 @@ def test_transpile_error_with_invalid_transpiler_config_path_override(mock_cli_f
 def test_transpile_error_with_invalid_transpiler_config_path_configuration(mock_cli_for_transpile) -> None:
     ws, cfg, set_cfg, do_transpile = mock_cli_for_transpile
     set_cfg(dataclasses.replace(cfg, transpiler_config_path="invalid_path"))
-    expected_error = "Invalid transpiler path configured, path does not exist: invalid_path"
+    expected_error = "Error: Invalid value for '--transpiler-config-path': 'invalid_path', file does not exist."
     with pytest.raises(ValueError, match=re.escape(expected_error)):
         cli.transpile(w=ws)
     do_transpile.assert_not_called()

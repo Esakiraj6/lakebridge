@@ -358,7 +358,7 @@ class _TranspileConfigChecker:
         transpiler_config_path = self._transpiler_repository.transpiler_config_path(transpiler_name)
         logger.info(f"Lakebridge will use the {transpiler_name} transpiler.")
         self._config = dataclasses.replace(self._config, transpiler_config_path=str(transpiler_config_path))
-        return TranspileEngine.load_engine(transpiler_config_path)
+        return LSPEngine.from_config_path(transpiler_config_path)
 
     def _configure_source_dialect(
         self, source_dialect: str, engine: TranspileEngine | None, msg_prefix: str
@@ -426,14 +426,15 @@ class _TranspileConfigChecker:
         #
 
         # Step 1: Check the transpiler config path.
+        engine: TranspileEngine | None
         transpiler_config_path = self._config.transpiler_config_path
         if transpiler_config_path is not None:
             self._validate_transpiler_config_path(
                 transpiler_config_path,
-                f"Invalid transpiler path configured, path does not exist: {transpiler_config_path}",
+                f"Error: Invalid value for '--transpiler-config-path': '{str(transpiler_config_path)}', file does not exist.",
             )
             path = Path(transpiler_config_path)
-            engine = TranspileEngine.load_engine(path)
+            engine = LSPEngine.from_config_path(path)
         else:
             engine = None
         del transpiler_config_path
