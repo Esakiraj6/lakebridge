@@ -13,7 +13,7 @@ from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSour
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.utils import DataSourceUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.exception import InvalidSnowflakePemPrivateKey
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
@@ -178,7 +178,7 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._spark.read.format("snowflake").option("dbtable", f"({query}) as tmp").options(**options)
 
     def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
-        return DataSourceUtils.normalize_identifier(
+        return DialectUtils.normalize_identifier(
             identifier,
             source_start_delimiter=SnowflakeDataSource._IDENTIFIER_DELIMITER,
             source_end_delimiter=SnowflakeDataSource._IDENTIFIER_DELIMITER,

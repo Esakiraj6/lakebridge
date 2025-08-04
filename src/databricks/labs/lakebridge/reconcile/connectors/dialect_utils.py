@@ -1,7 +1,7 @@
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 
 
-class DataSourceUtils:
+class DialectUtils:
     _ANSI_IDENTIFIER_DELIMITER = "`"
 
     @staticmethod
@@ -10,24 +10,24 @@ class DataSourceUtils:
     ) -> NormalizedIdentifier:
         identifier = identifier.strip().lower()
 
-        ansi = DataSourceUtils._normalize_identifier_source_agnostic(
+        ansi = DialectUtils._normalize_identifier_source_agnostic(
             identifier,
             source_start_delimiter,
             source_end_delimiter,
-            DataSourceUtils._ANSI_IDENTIFIER_DELIMITER,
-            DataSourceUtils._ANSI_IDENTIFIER_DELIMITER,
+            DialectUtils._ANSI_IDENTIFIER_DELIMITER,
+            DialectUtils._ANSI_IDENTIFIER_DELIMITER,
         )
 
         if ansi == identifier:
-            source = DataSourceUtils._normalize_identifier_source_agnostic(
+            source = DialectUtils._normalize_identifier_source_agnostic(
                 identifier,
-                DataSourceUtils._ANSI_IDENTIFIER_DELIMITER,
-                DataSourceUtils._ANSI_IDENTIFIER_DELIMITER,
+                DialectUtils._ANSI_IDENTIFIER_DELIMITER,
+                DialectUtils._ANSI_IDENTIFIER_DELIMITER,
                 source_start_delimiter,
                 source_end_delimiter,
             )
         else:
-            source = DataSourceUtils._normalize_identifier_source_agnostic(
+            source = DialectUtils._normalize_identifier_source_agnostic(
                 identifier, source_start_delimiter, source_end_delimiter, source_start_delimiter, source_end_delimiter
             )
 
@@ -44,12 +44,12 @@ class DataSourceUtils:
         if identifier == "" or identifier is None:
             return ""
 
-        if DataSourceUtils._is_already_delimited(
+        if DialectUtils._is_already_delimited(
             identifier, expected_source_start_delimiter, expected_source_end_delimiter
         ):
             return identifier
 
-        if DataSourceUtils._is_already_delimited(identifier, source_start_delimiter, source_end_delimiter):
+        if DialectUtils._is_already_delimited(identifier, source_start_delimiter, source_end_delimiter):
             stripped_identifier = identifier.removeprefix(source_start_delimiter).removesuffix(source_end_delimiter)
         else:
             stripped_identifier = identifier

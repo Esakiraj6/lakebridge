@@ -11,7 +11,7 @@ from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSour
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.utils import DataSourceUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -136,7 +136,7 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._get_jdbc_reader(query, self.get_jdbc_url, self._DRIVER, prepare_query_str)
 
     def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
-        return DataSourceUtils.normalize_identifier(
+        return DialectUtils.normalize_identifier(
             identifier,
             source_start_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"],
             source_end_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"],

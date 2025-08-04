@@ -10,7 +10,7 @@ from sqlglot import Dialect
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
-from databricks.labs.lakebridge.reconcile.connectors.utils import DataSourceUtils
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -90,7 +90,7 @@ class DatabricksDataSource(DataSource, SecretsMixin):
             return self.log_and_throw_exception(e, "schema", schema_query)
 
     def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
-        return DataSourceUtils.normalize_identifier(
+        return DialectUtils.normalize_identifier(
             identifier,
             source_start_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,
             source_end_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,
