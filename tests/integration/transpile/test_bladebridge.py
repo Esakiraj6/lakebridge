@@ -7,8 +7,8 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.install import WheelInstaller
 from databricks.labs.lakebridge.transpiler.execute import transpile
+from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
-from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def _transpile_informatica_with_sparksql(
 ) -> None:
     WheelInstaller(transpiler_repository, "bladebridge", "databricks-bb-plugin", bladebridge_artifact).install()
     config_path = transpiler_repository.transpiler_config_path("Bladebridge")
-    lsp_engine = TranspileEngine.load_engine(config_path)
+    lsp_engine = LSPEngine.from_config_path(config_path)
     input_source = Path(__file__).parent.parent.parent / "resources" / "functional" / "informatica"
     transpile_config = TranspileConfig(
         transpiler_config_path=str(config_path),
