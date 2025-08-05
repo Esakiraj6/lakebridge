@@ -13,7 +13,6 @@ from json import loads, dump
 from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run, CalledProcessError
-import sys
 from typing import Any, Literal, cast
 from urllib import request
 from urllib.error import URLError, HTTPError
