@@ -95,23 +95,23 @@ def table_conf():
 @pytest.fixture
 def table_schema():
     sch = [
-        Schema("s_suppkey", "number"),
-        Schema("s_name", "varchar"),
-        Schema("s_address", "varchar"),
-        Schema("s_nationkey", "number"),
-        Schema("s_phone", "varchar"),
-        Schema("s_acctbal", "number"),
-        Schema("s_comment", "varchar"),
+        schema_fixture_factory("s_suppkey", "number"),
+        schema_fixture_factory("s_name", "varchar"),
+        schema_fixture_factory("s_address", "varchar"),
+        schema_fixture_factory("s_nationkey", "number"),
+        schema_fixture_factory("s_phone", "varchar"),
+        schema_fixture_factory("s_acctbal", "number"),
+        schema_fixture_factory("s_comment", "varchar"),
     ]
 
     sch_with_alias = [
-        Schema("s_suppkey_t", "number"),
-        Schema("s_name", "varchar"),
-        Schema("s_address_t", "varchar"),
-        Schema("s_nationkey_t", "number"),
-        Schema("s_phone_t", "varchar"),
-        Schema("s_acctbal_t", "number"),
-        Schema("s_comment_t", "varchar"),
+        schema_fixture_factory("s_suppkey_t", "number"),
+        schema_fixture_factory("s_name", "varchar"),
+        schema_fixture_factory("s_address_t", "varchar"),
+        schema_fixture_factory("s_nationkey_t", "number"),
+        schema_fixture_factory("s_phone_t", "varchar"),
+        schema_fixture_factory("s_acctbal_t", "number"),
+        schema_fixture_factory("s_comment_t", "varchar"),
     ]
 
     return sch, sch_with_alias
@@ -208,6 +208,10 @@ def report_tables_schema():
     )
 
     return recon_schema, metrics_schema, details_schema
+
+
+def schema_fixture_factory(column_name: str, data_type: str) -> Schema:
+    return Schema(column_name, data_type)
 
 
 @pytest.fixture
