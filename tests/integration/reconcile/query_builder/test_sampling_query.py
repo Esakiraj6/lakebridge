@@ -7,9 +7,10 @@ from databricks.labs.lakebridge.reconcile.query_builder.sampling_query import (
 from databricks.labs.lakebridge.reconcile.recon_config import (
     ColumnMapping,
     Filters,
-    Schema,
     Transformation,
 )
+
+from tests.conftest import schema_fixture_factory
 
 
 def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
@@ -111,13 +112,13 @@ def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column
     )
 
     sch = [
-        Schema("s_suppkey", "number"),
-        Schema("s_name", "varchar"),
-        Schema("s_address", "varchar"),
-        Schema("s_nationkey", "number"),
-        Schema("s_phone", "nvarchar"),
-        Schema("s_acctbal", "number"),
-        Schema("s_comment", "nchar"),
+        schema_fixture_factory("s_suppkey", "number"),
+        schema_fixture_factory("s_name", "varchar"),
+        schema_fixture_factory("s_address", "varchar"),
+        schema_fixture_factory("s_nationkey", "number"),
+        schema_fixture_factory("s_phone", "nvarchar"),
+        schema_fixture_factory("s_acctbal", "number"),
+        schema_fixture_factory("s_comment", "nchar"),
     ]
 
     src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("oracle")).build_query(df)
@@ -171,13 +172,13 @@ def test_build_query_for_databricks_src(mock_spark, table_conf):
     df = spark.createDataFrame([(1, 'name-1', 'add-1', 11, '1-1', 100, 'c-1')], schema=df_schema)
 
     schema = [
-        Schema("s_suppkey", "bigint"),
-        Schema("s_name", "string"),
-        Schema("s_address", "string"),
-        Schema("s_nationkey", "bigint"),
-        Schema("s_phone", "string"),
-        Schema("s_acctbal", "bigint"),
-        Schema("s_comment", "string"),
+        schema_fixture_factory("s_suppkey", "bigint"),
+        schema_fixture_factory("s_name", "string"),
+        schema_fixture_factory("s_address", "string"),
+        schema_fixture_factory("s_nationkey", "bigint"),
+        schema_fixture_factory("s_phone", "string"),
+        schema_fixture_factory("s_acctbal", "bigint"),
+        schema_fixture_factory("s_comment", "string"),
     ]
 
     conf = table_conf(join_columns=["s_suppkey", "s_nationkey"])
@@ -269,9 +270,17 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
 
 def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, table_conf):
     spark = mock_spark
-    sch = [Schema("s_suppkey", "varchar"), Schema("s_name", "varchar"), Schema("s_nationkey", "number")]
+    sch = [
+        schema_fixture_factory("s_suppkey", "varchar"),
+        schema_fixture_factory("s_name", "varchar"),
+        schema_fixture_factory("s_nationkey", "number"),
+    ]
 
-    sch_with_alias = [Schema("s_suppkey_t", "varchar"), Schema("s_name", "varchar"), Schema("s_nationkey_t", "number")]
+    sch_with_alias = [
+        schema_fixture_factory("s_suppkey_t", "varchar"),
+        schema_fixture_factory("s_name", "varchar"),
+        schema_fixture_factory("s_nationkey_t", "number"),
+    ]
     df_schema = StructType(
         [
             StructField('s_suppkey', StringType()),
