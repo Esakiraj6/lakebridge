@@ -5,6 +5,7 @@ import asyncio
 import logging
 import os
 import sys
+import venv
 from collections.abc import Callable, Sequence, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -432,65 +433,32 @@ class LSPEngine(TranspileEngine):
         logger.debug(f"LSP init params: {params}")
         self._init_response = await self._client.initialize_async(params)
 
-    async def _start_server(self):
-        executable = self._config.remorph.command_line[0]
-        if executable in {"python", "python3"}:
-            await self._start_python_server()
-        else:
-            await self._start_other_server()
+    async def _start_server(self) -> None:
+        env: Mapping[str, str] = os.environ | self._config.remorph.env_vars
+        match self._config.remorph.command_line:
+            case [executable, *args] if executable in {"python", "python3"}:
+                executable = self._get_python_command(executable)
+            case [executable, *args]:
+                pass
+            case _:
+                raise ValueError(f"Missing command line for LSP server: {self._config.path}")
+        await self._launch_executable(executable, args, env)
 
-    async def _start_python_server(self):
-        has_venv = (self._workdir / ".venv").exists()
-        if has_venv:
-            await self._start_python_server_with_venv()
-        else:
-            await self._start_python_server_without_venv()
+    def _get_python_command(self, executable: str) -> str:
+        venv_path = self._workdir / ".venv"
+        # Tests run without a virtual environment.
+        if venv_path.exists():
+            use_symlinks = sys.platform != "win32"
+            builder = venv.EnvBuilder(symlinks=use_symlinks)
+            context = builder.ensure_directories(venv_path)
+            executable = context.env_exec_cmd
+        return executable
 
-    async def _start_python_server_with_venv(self):
-        env: dict[str, str] = os.environ | self._config.remorph.env_vars
-        # ensure modules are searched within venv
-        if "PYTHONPATH" in env.keys():
-            del env["PYTHONPATH"]
-        if "VIRTUAL_ENV" in env.keys():
-            del env["VIRTUAL_ENV"]
-        if "VIRTUAL_ENV_PROMPT" in env.keys():
-            del env["VIRTUAL_ENV_PROMPT"]
-        path = self._workdir / ".venv" / "Scripts" if sys.platform == "win32" else self._workdir / ".venv" / "bin"
-        if "PATH" in env.keys():
-            env["PATH"] = str(path) + os.pathsep + env["PATH"]
-        else:
-            env["PATH"] = str(path)
-        python = "python.exe" if sys.platform == "win32" else "python3"
-        executable = path / python
-        await self._launch_executable(executable, env)
-
-    async def _start_python_server_without_venv(self):
-        env: dict[str, str] = os.environ | self._config.remorph.env_vars
-        # ensure modules are searched locally before being searched in remorph
-        if "PYTHONPATH" in env.keys():
-            env["PYTHONPATH"] = str(self._workdir) + os.pathsep + env["PYTHONPATH"]
-        else:
-            env["PYTHONPATH"] = str(self._workdir)
-        executable = Path(self._config.remorph.command_line[0])
-        await self._launch_executable(executable, env)
-
-    async def _start_other_server(self):
-        env: dict[str, str] = os.environ | self._config.remorph.env_vars
-        # ensure modules are searched within venv
-        if "PYTHONPATH" in env.keys():
-            del env["PYTHONPATH"]
-        if "VIRTUAL_ENV" in env.keys():
-            del env["VIRTUAL_ENV"]
-        if "VIRTUAL_ENV_PROMPT" in env.keys():
-            del env["VIRTUAL_ENV_PROMPT"]
-        executable = Path(self._config.remorph.command_line[0])
-        await self._launch_executable(executable, env)
-
-    async def _launch_executable(self, executable: Path, env: Mapping):
+    async def _launch_executable(self, executable: str, args: Sequence[str], env: Mapping[str, str]) -> None:
         log_level = logging.getLevelName(logging.getLogger("databricks").level)
-        args = self._config.remorph.command_line[1:] + [f"--log_level={log_level}"]
+        args = [*args, f"--log_level={log_level}"]
         logger.debug(f"Starting LSP engine: {executable} {args} (cwd={os.getcwd()})")
-        await self._client.start_io(str(executable), env=env, *args)
+        await self._client.start_io(executable, env=env, *args)
 
     def _client_capabilities(self):
         return ClientCapabilities()  # TODO do we need to refine this ?
