@@ -3,6 +3,7 @@ from functools import reduce
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, expr, lit
 
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.exception import ColumnMismatchException
 from databricks.labs.lakebridge.reconcile.recon_capture import (
     ReconIntermediatePersist,
@@ -22,7 +23,7 @@ _HASH_COLUMN_NAME = "hash_value_recon"
 _SAMPLE_ROWS = 50
 
 
-def raise_column_mismatch_exception(msg: str, source_missing: list[str], target_missing: list[str]) -> Exception:
+def _raise_column_mismatch_exception(msg: str, source_missing: list[str], target_missing: list[str]) -> Exception:
     error_msg = (
         f"{msg}\n"
         f"columns missing in source: {','.join(source_missing) if source_missing else None}\n"
@@ -38,6 +39,8 @@ def _generate_join_condition(source_alias, target_alias, key_columns):
     ]
     return reduce(lambda a, b: a & b, conditions)
 
+def _normalize_df_col(table_name, column_name):
+    return f"`{table_name}_{DialectUtils.unnormalize_identifier(column_name)}`"
 
 def reconcile_data(
     source: DataFrame,
@@ -59,8 +62,8 @@ def reconcile_data(
             how="full",
         )
         .selectExpr(
-            *[f'{source_alias}.{col_name} as {source_alias}_{col_name}' for col_name in source.columns],
-            *[f'{target_alias}.{col_name} as {target_alias}_{col_name}' for col_name in target.columns],
+            *[f'{source_alias}.{DialectUtils.ansi_normalize_identifier(col_name)} as {_normalize_df_col(source_alias, col_name)}' for col_name in source.columns],
+            *[f'{target_alias}.{DialectUtils.ansi_normalize_identifier(col_name)} as {_normalize_df_col(target_alias, col_name)}' for col_name in target.columns],
         )
     )
 
@@ -132,14 +135,15 @@ def _get_mismatch_data(df: DataFrame, src_alias: str, tgt_alias: str) -> DataFra
     )
 
 
-def _convert_columns_to_lowercase(df: DataFrame) -> DataFrame:
-    lowercased_columns = [col(column).alias(column.lower()) for column in df.columns]
-    return df.select(*lowercased_columns)
+def _unnormalize_columns(df: DataFrame) -> DataFrame:
+    unnormalized_columns = [col(DialectUtils.unnormalize_identifier(column)).alias(DialectUtils.unnormalize_identifier(column)) for column in df.columns]
+    return df.select(*unnormalized_columns)
 
 
 def capture_mismatch_data_and_columns(source: DataFrame, target: DataFrame, key_columns: list[str]) -> MismatchOutput:
-    source_df = _convert_columns_to_lowercase(source)
-    target_df = _convert_columns_to_lowercase(target)
+    source_df = _unnormalize_columns(source)
+    target_df = _unnormalize_columns(target)
+    unnormalized_key_columns = [DialectUtils.unnormalize_identifier(column) for column in key_columns]
 
     source_columns = source_df.columns
     target_columns = target_df.columns
@@ -148,10 +152,10 @@ def capture_mismatch_data_and_columns(source: DataFrame, target: DataFrame, key_
         message = "source and target should have same columns for capturing the mismatch data"
         source_missing = [column for column in target_columns if column not in source_columns]
         target_missing = [column for column in source_columns if column not in target_columns]
-        raise raise_column_mismatch_exception(message, source_missing, target_missing)
+        raise _raise_column_mismatch_exception(message, source_missing, target_missing)
 
-    check_columns = [column for column in source_columns if column not in key_columns]
-    mismatch_df = _get_mismatch_df(source_df, target_df, key_columns, check_columns)
+    check_columns = [column for column in source_columns if column not in unnormalized_key_columns]
+    mismatch_df = _get_mismatch_df(source_df, target_df, unnormalized_key_columns, check_columns)
     mismatch_columns = _get_mismatch_columns(mismatch_df, check_columns)
     return MismatchOutput(mismatch_df, mismatch_columns)
 
@@ -166,16 +170,24 @@ def _get_mismatch_columns(df: DataFrame, columns: list[str]):
             mismatch_columns.append(column)
     return mismatch_columns
 
+def _normalize_mismatch_df_col(column, suffix):
+    unnormalized = DialectUtils.unnormalize_identifier(column) + suffix
+    return DialectUtils.ansi_normalize_identifier(unnormalized)
+
+def _unnormalize_mismatch_df_col(column, suffix):
+    unnormalized = DialectUtils.unnormalize_identifier(column) + suffix
+    return unnormalized
+
 
 def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str], column_list: list[str]):
-    source_aliased = [col('base.' + column).alias(column + '_base') for column in column_list]
-    target_aliased = [col('compare.' + column).alias(column + '_compare') for column in column_list]
+    source_aliased = [col('base.' + DialectUtils.unnormalize_identifier(column)).alias(_unnormalize_mismatch_df_col(column,'_base')) for column in column_list]
+    target_aliased = [col('compare.' + DialectUtils.unnormalize_identifier(column)).alias(_unnormalize_mismatch_df_col(column,'_compare')) for column in column_list]
 
-    match_expr = [expr(f"{column}_base=={column}_compare").alias(column + "_match") for column in column_list]
-    key_cols = [col(column) for column in key_columns]
+    match_expr = [expr(f"{_normalize_mismatch_df_col(column,'_base')}=={_normalize_mismatch_df_col(column,'_compare')}").alias(_unnormalize_mismatch_df_col(column,'_match')) for column in column_list]
+    key_cols = [col(DialectUtils.unnormalize_identifier(column)) for column in key_columns]
     select_expr = key_cols + source_aliased + target_aliased + match_expr
 
-    filter_columns = " and ".join([column + "_match" for column in column_list])
+    filter_columns = " and ".join([_unnormalize_mismatch_df_col(column,'_match') for column in column_list])
     filter_expr = ~expr(filter_columns)
 
     logger.info(f"KEY COLUMNS: {key_columns}")
@@ -185,14 +197,10 @@ def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str
     mismatch_df = (
         source.alias('base').join(other=target.alias('compare'), on=key_columns, how="inner").select(*select_expr)
     )
+    mismatch_df.show()
 
     compare_columns = [column for column in mismatch_df.columns if column not in key_columns]
     return mismatch_df.select(*key_columns + sorted(compare_columns))
-
-
-def alias_column_str(alias: str, columns: list[str]) -> list[str]:
-    return [f"{alias}.{column}" for column in columns]
-
 
 def _generate_agg_join_condition(source_alias: str, target_alias: str, key_columns: list[str]):
     join_columns: list[ColumnMapping] = [

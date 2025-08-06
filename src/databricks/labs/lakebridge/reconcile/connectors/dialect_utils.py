@@ -5,6 +5,17 @@ class DialectUtils:
     _ANSI_IDENTIFIER_DELIMITER = "`"
 
     @staticmethod
+    def unnormalize_identifier(identifier: str) -> str:
+        ansi = DialectUtils.ansi_normalize_identifier(identifier)
+        return ansi[1:-1]
+
+    @staticmethod
+    def ansi_normalize_identifier(identifier: str) -> str:
+        return DialectUtils.normalize_identifier(identifier,
+                                                 DialectUtils._ANSI_IDENTIFIER_DELIMITER,
+                                                 DialectUtils._ANSI_IDENTIFIER_DELIMITER).ansi_normalized
+
+    @staticmethod
     def normalize_identifier(
         identifier: str, source_start_delimiter: str, source_end_delimiter: str
     ) -> NormalizedIdentifier:
