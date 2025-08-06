@@ -99,6 +99,7 @@ class _PathBackup:
 
 class TranspilerInstaller(abc.ABC):
 
+    # TODO: Remove these properties when post-install is removed.
     _install_path: Path
     """The path where the transpiler is being installed, once this starts."""
 
