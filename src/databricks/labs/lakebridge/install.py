@@ -149,6 +149,7 @@ class TranspilerInstaller(abc.ABC):
             except (CalledProcessError, KeyError, ValueError) as e:
                 logger.error(f"Failed to install {self._product_name} transpiler (v{version})", exc_info=e)
                 result = False
+
             if result:
                 logger.info(f"Successfully installed {self._product_name} transpiler (v{version})")
                 self._store_product_state(product_path=product_path, version=version)
