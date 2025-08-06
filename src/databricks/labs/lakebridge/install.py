@@ -145,6 +145,10 @@ class TranspilerInstaller(abc.ABC):
             try:
                 result = self._install_version(version)
             except (CalledProcessError, KeyError, ValueError) as e:
+                # Warning: if you end up here under the IntelliJ/PyCharm debugger, it can be because the debugger is
+                # trying to inject itself into the subprocess. Try disabling:
+                #   Settings | Build, Execution, Deployment | Python Debugger | Attach to subprocess automatically while debugging
+                # Note: Subprocess output is not captured, and should already be visible in the console.
                 logger.error(f"Failed to install {self._product_name} transpiler (v{version})", exc_info=e)
                 result = False
 
