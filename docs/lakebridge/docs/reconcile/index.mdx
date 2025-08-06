@@ -105,7 +105,7 @@ from databricks.labs.lakebridge.reconcile.exception import ReconciliationExcepti
 ws = WorkspaceClient(product="lakebridge", product_version=__version__)
 
 
-try:s
+try:
   result = TriggerReconService.trigger_recon(
             ws = ws,
             spark = spark, # notebook spark session
