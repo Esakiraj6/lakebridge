@@ -446,6 +446,7 @@ class LSPEngine(TranspileEngine):
         logger.debug(f"Using PATH for launching LSP server: {path}")
 
         # Locate the LSP server executable in a platform-independent way.
+        # Reference: https://docs.python.org/3/library/subprocess.html#popen-constructor
         if not (command_line := self._config.remorph.command_line):
             raise ValueError(f"Missing command line for LSP server: {self._config.path}")
         executable, *args = command_line
