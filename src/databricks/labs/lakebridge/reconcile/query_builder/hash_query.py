@@ -4,6 +4,7 @@ from functools import reduce
 import sqlglot.expressions as exp
 from sqlglot import Dialect
 
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.query_builder.base import QueryBuilder
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
     build_column,
@@ -42,7 +43,7 @@ class HashQueryBuilder(QueryBuilder):
         key_cols = hash_cols if report_type == "row" else sorted(_join_columns | self.partition_column)
 
         cols_with_alias = [
-            build_column(this=col, alias=self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer))
+            build_column(this=col, alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)), quoted=True)
             for col in key_cols
         ]
 
@@ -64,7 +65,7 @@ class HashQueryBuilder(QueryBuilder):
         res = (
             exp.select(*hash_col_with_transform + key_cols_with_transform)
             .from_(":tbl")
-            .where(self.filter)
+            .where(self.filter, dialect=get_dialect("databricks"))
             .sql(dialect=dialect)
         )
 
@@ -80,7 +81,7 @@ class HashQueryBuilder(QueryBuilder):
         cols_with_transform = self.add_transformations(
             cols_with_alias, self.engine if self.layer == "source" else get_dialect("databricks")
         )
-        col_exprs = exp.select(*cols_with_transform).iter_expressions()
+        col_exprs = exp.select(*cols_with_transform, dialect=get_dialect("databricks")).iter_expressions()
         concat_expr = concat(list(col_exprs))
 
         if self.engine == "oracle":
