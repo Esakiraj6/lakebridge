@@ -13,7 +13,7 @@ from json import loads, dump
 from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run, CalledProcessError
-from typing import Any, cast
+from typing import Any, Literal, cast
 from urllib import request
 from urllib.error import URLError, HTTPError
 from zipfile import ZipFile
@@ -42,9 +42,70 @@ logger = logging.getLogger(__name__)
 TRANSPILER_WAREHOUSE_PREFIX = "Lakebridge Transpiler Validation"
 
 
+class _PathBackup:
+    """A context manager to preserve a path before performing an operation, and optionally restore it afterwards."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._backup_path: Path | None = None
+        self._finished = False
+
+    def __enter__(self) -> "_PathBackup":
+        self.start()
+        return self
+
+    def start(self) -> None:
+        """Start the backup process by creating a backup of the path, if it already exists."""
+        backup_path = self._path.with_name(f"{self._path.name}-saved")
+        if backup_path.exists():
+            logger.debug(f"Existing backup found, removing: {backup_path}")
+            rmtree(backup_path)
+        if self._path.exists():
+            logger.debug(f"Backing up existing path: {self._path} -> {backup_path}")
+            os.rename(self._path, backup_path)
+            self._backup_path = backup_path
+        else:
+            self._backup_path = None
+
+    def rollback(self) -> None:
+        """Rollback the operation by restoring the backup path, if it exists."""
+        assert not self._finished, "Can only rollback/commit once."
+        logger.debug(f"Removing path: {self._path}")
+        rmtree(self._path)
+        if self._backup_path is not None:
+            logger.debug(f"Restoring previous path: {self._backup_path} -> {self._path}")
+            os.rename(self._backup_path, self._path)
+            self._backup_path = None
+        self._finished = True
+
+    def commit(self) -> None:
+        """Commit the operation by removing the backup path, if it exists."""
+        assert not self._finished, "Can only rollback/commit once."
+        if self._backup_path is not None:
+            logger.debug(f"Removing backup path: {self._backup_path}")
+            rmtree(self._backup_path)
+            self._backup_path = None
+        self._finished = True
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
+        if not self._finished:
+            # Automatically commit or rollback based on whether an exception is underway.
+            if exc_val is None:
+                self.commit()
+            else:
+                self.rollback()
+        return False  # Do not suppress any exception underway
+
+
 class TranspilerInstaller(abc.ABC):
-    def __init__(self, repository: TranspilerRepository) -> None:
+
+    # TODO: Remove these properties when post-install is removed.
+    _install_path: Path
+    """The path where the transpiler is being installed, once this starts."""
+
+    def __init__(self, repository: TranspilerRepository, product_name: str) -> None:
         self._repository = repository
+        self._product_name = product_name
 
     _version_pattern = re.compile(r"[_-](\d+(?:[.\-_]\w*\d+)+)")
 
@@ -74,6 +135,35 @@ class TranspilerInstaller(abc.ABC):
             dump(version_data, f)
             f.write("\n")
 
+    def _install_version_with_backup(self, version: str) -> Path | None:
+        """Install a specific version of the transpiler, with backup handling."""
+        logger.info(f"Installing Databricks {self._product_name} transpiler (v{version})")
+        product_path = self._repository.transpilers_path() / self._product_name
+        with _PathBackup(product_path) as backup:
+            self._install_path = product_path / "lib"
+            self._install_path.mkdir(parents=True, exist_ok=True)
+            try:
+                result = self._install_version(version)
+            except (CalledProcessError, KeyError, ValueError) as e:
+                # Warning: if you end up here under the IntelliJ/PyCharm debugger, it can be because the debugger is
+                # trying to inject itself into the subprocess. Try disabling:
+                #   Settings | Build, Execution, Deployment | Python Debugger | Attach to subprocess automatically while debugging
+                # Note: Subprocess output is not captured, and should already be visible in the console.
+                logger.error(f"Failed to install {self._product_name} transpiler (v{version})", exc_info=e)
+                result = False
+
+            if result:
+                logger.info(f"Successfully installed {self._product_name} transpiler (v{version})")
+                self._store_product_state(product_path=product_path, version=version)
+                backup.commit()
+                return product_path
+            backup.rollback()
+        return None
+
+    @abc.abstractmethod
+    def _install_version(self, version: str) -> bool:
+        """Install a specific version of the transpiler, returning True if successful."""
+
 
 class WheelInstaller(TranspilerInstaller):
 
@@ -101,8 +191,7 @@ class WheelInstaller(TranspilerInstaller):
         pypi_name: str,
         artifact: Path | None = None,
     ) -> None:
-        super().__init__(repository)
-        self._product_name = product_name
+        super().__init__(repository, product_name)
         self._pypi_name = pypi_name
         self._artifact = artifact
 
@@ -123,38 +212,13 @@ class WheelInstaller(TranspilerInstaller):
         if installed_version == latest_version:
             logger.info(f"{self._pypi_name} v{latest_version} already installed")
             return None
-        return self._install_latest_version(latest_version)
+        return self._install_version_with_backup(latest_version)
 
-    def _install_latest_version(self, version: str) -> Path | None:
-        logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        self._product_path = self._repository.transpilers_path() / self._product_name
-        backup_path = Path(f"{self._product_path!s}-saved")
-        if self._product_path.exists():
-            os.rename(self._product_path, backup_path)
-        self._install_path = self._product_path / "lib"
-        self._install_path.mkdir(parents=True, exist_ok=True)
-        try:
-            result = self._unsafe_install_latest_version(version)
-            logger.info(f"Successfully installed {self._pypi_name} v{version}")
-            if backup_path.exists():
-                rmtree(backup_path)
-            return result
-        except (CalledProcessError, ValueError) as e:
-            # Warning: if you end up here under the IntelliJ/PyCharm debugger, it can be because the debugger is
-            # trying to inject itself into the subprocess. Try disabling:
-            #   Settings | Build, Execution, Deployment | Python Debugger | Attach to subprocess automatically while debugging
-            # Note: Subprocess output is not captured, and should already be visible in the console.
-            logger.error(f"Failed to install {self._pypi_name} v{version}", exc_info=e)
-            rmtree(self._product_path)
-            if backup_path.exists():
-                os.rename(backup_path, self._product_path)
-            return None
-
-    def _unsafe_install_latest_version(self, version: str) -> Path | None:
+    def _install_version(self, version: str) -> bool:
         self._create_venv()
         self._install_with_pip()
         self._copy_lsp_resources()
-        return self._post_install(version)
+        return self._post_install() is not None
 
     def _create_venv(self) -> None:
         venv_path = self._install_path / ".venv"
@@ -194,7 +258,7 @@ class WheelInstaller(TranspilerInstaller):
             raise ValueError("Installed transpiler is missing a 'lsp' folder")
         shutil.copytree(lsp, self._install_path, dirs_exist_ok=True)
 
-    def _post_install(self, version: str) -> Path | None:
+    def _post_install(self) -> Path | None:
         config = self._install_path / "config.yml"
         if not config.exists():
             raise ValueError("Installed transpiler is missing a 'config.yml' file in its 'lsp' folder")
@@ -203,7 +267,6 @@ class WheelInstaller(TranspilerInstaller):
         installer = self._install_path / install_script
         if installer.exists():
             self._run_custom_installer(installer)
-        self._store_product_state(product_path=self._product_path, version=version)
         return self._install_path
 
     def _run_custom_installer(self, installer):
@@ -295,8 +358,7 @@ class MavenInstaller(TranspilerInstaller):
         artifact_id: str,
         artifact: Path | None = None,
     ) -> None:
-        super().__init__(repository)
-        self._product_name = product_name
+        super().__init__(repository, product_name)
         self._group_id = group_id
         self._artifact_id = artifact_id
         self._artifact = artifact
@@ -317,40 +379,15 @@ class MavenInstaller(TranspilerInstaller):
         if installed_version == latest_version:
             logger.info(f"Databricks {self._product_name} transpiler v{latest_version} already installed")
             return None
-        return self._install_version(latest_version)
+        return self._install_version_with_backup(latest_version)
 
-    def _install_version(self, version: str) -> Path | None:
-        logger.info(f"Installing Databricks {self._product_name} transpiler v{version}")
-        self._product_path = self._repository.transpilers_path() / self._product_name
-        backup_path = Path(f"{self._product_path!s}-saved")
-        if backup_path.exists():
-            rmtree(backup_path)
-        if self._product_path.exists():
-            os.rename(self._product_path, backup_path)
-        self._product_path.mkdir(parents=True)
-        self._install_path = self._product_path / "lib"
-        self._install_path.mkdir()
-        try:
-            if self._unsafe_install_version(version):
-                logger.info(f"Successfully installed {self._product_name} v{version}")
-                self._store_product_state(self._product_path, version)
-                if backup_path.exists():
-                    rmtree(backup_path)
-                return self._product_path
-        except (KeyError, ValueError) as e:
-            logger.error(f"Failed to install Databricks {self._product_name} transpiler v{version}", exc_info=e)
-        rmtree(self._product_path)
-        if backup_path.exists():
-            os.rename(backup_path, self._product_path)
-        return None
-
-    def _unsafe_install_version(self, version: str) -> bool:
+    def _install_version(self, version: str) -> bool:
         jar_file_path = self._install_path / f"{self._artifact_id}.jar"
         if self._artifact:
-            logger.debug(f"Copying '{self._artifact!s}' to '{jar_file_path!s}'")
+            logger.debug(f"Copying: {self._artifact} -> {jar_file_path}")
             shutil.copyfile(self._artifact, jar_file_path)
         elif not self.download_artifact_from_maven(self._group_id, self._artifact_id, version, jar_file_path):
-            logger.error(f"Failed to install Databricks {self._product_name} transpiler v{version}")
+            logger.error(f"Failed to install Databricks {self._product_name} transpiler (v{version})")
             return False
         self._copy_lsp_config(jar_file_path)
         return True
