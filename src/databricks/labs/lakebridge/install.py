@@ -102,9 +102,6 @@ class TranspilerInstaller(abc.ABC):
     _install_path: Path
     """The path where the transpiler is being installed, once this starts."""
 
-    _product_path: Path
-    """The path where the transpiler is installed, after this has finished."""
-
     def __init__(self, repository: TranspilerRepository, product_name: str) -> None:
         self._repository = repository
         self._product_name = product_name
@@ -154,7 +151,6 @@ class TranspilerInstaller(abc.ABC):
                 logger.info(f"Successfully installed {self._product_name} transpiler (v{version})")
                 self._store_product_state(product_path=product_path, version=version)
                 backup.commit()
-                self._product_path = product_path
                 return product_path
             backup.rollback()
         return None
