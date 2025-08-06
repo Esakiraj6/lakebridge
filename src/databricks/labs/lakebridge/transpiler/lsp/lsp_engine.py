@@ -35,7 +35,7 @@ from pygls.lsp.client import BaseLanguageClient
 from databricks.labs.blueprint.wheels import ProductInfo
 from databricks.labs.lakebridge.config import LSPConfigOptionV1, TranspileConfig, TranspileResult
 from databricks.labs.lakebridge.errors.exceptions import IllegalStateException
-from databricks.labs.lakebridge.helpers.file_utils import chdir, is_dbt_project_file, is_sql_file
+from databricks.labs.lakebridge.helpers.file_utils import is_dbt_project_file, is_sql_file
 from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 from databricks.labs.lakebridge.transpiler.transpile_status import (
     CodePosition,
@@ -409,9 +409,7 @@ class LSPEngine(TranspileEngine):
         if self.is_alive:
             raise IllegalStateException("LSP engine is already initialized")
         try:
-            # TODO: Avoid this by setting the working directory when launching the child process.
-            with chdir(self._workdir):
-                await self._do_initialize(config)
+            await self._do_initialize(config)
             await self._await_for_transpile_capability()
         # it is good practice to catch broad exceptions raised by launching a child process
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -489,8 +487,8 @@ class LSPEngine(TranspileEngine):
     async def _launch_executable(self, executable: Path, env: Mapping):
         log_level = logging.getLevelName(logging.getLogger("databricks").level)
         args = self._config.remorph.command_line[1:] + [f"--log_level={log_level}"]
-        logger.debug(f"Starting LSP engine: {executable} {args} (cwd={os.getcwd()})")
-        await self._client.start_io(str(executable), env=env, *args)
+        logger.debug(f"Starting LSP engine: {executable} {args} (cwd={self._workdir})")
+        await self._client.start_io(str(executable), *args, env=env, cwd=self._workdir)
 
     def _client_capabilities(self):
         return ClientCapabilities()  # TODO do we need to refine this ?
