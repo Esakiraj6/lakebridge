@@ -1,24 +1,24 @@
 import re
 import abc
 import dataclasses
-import shutil
-from json import loads, dump
 import logging
 import os
+import shutil
+import sys
+import venv
+import webbrowser
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from json import loads, dump
+from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run, CalledProcessError
-import sys
 from typing import Any, cast
 from urllib import request
 from urllib.error import URLError, HTTPError
-import webbrowser
-from datetime import datetime, timezone
-from pathlib import Path
-import xml.etree.ElementTree as ET
 from zipfile import ZipFile
 
-from databricks.labs.blueprint.installation import Installation, JsonValue
-from databricks.labs.blueprint.installation import SerdeError
+from databricks.labs.blueprint.installation import Installation, JsonValue, SerdeError
 from databricks.labs.blueprint.installer import InstallState
 from databricks.labs.blueprint.tui import Prompts
 from databricks.labs.blueprint.wheels import ProductInfo
@@ -26,15 +26,14 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound, PermissionDenied
 
 from databricks.labs.lakebridge.config import (
-    TranspileConfig,
-    ReconcileConfig,
     DatabaseConfig,
+    ReconcileConfig,
     LakebridgeConfiguration,
     ReconcileMetadataConfig,
+    TranspileConfig,
 )
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
-from databricks.labs.lakebridge.helpers.file_utils import chdir
 from databricks.labs.lakebridge.reconcile.constants import ReconReportType, ReconSourceType
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
 
@@ -77,6 +76,12 @@ class TranspilerInstaller(abc.ABC):
 
 
 class WheelInstaller(TranspilerInstaller):
+
+    _venv_exec_cmd: Path
+    """Once created, the command to run the virtual environment's Python executable."""
+
+    _site_packages: Path
+    """Once created, the path to the site-packages directory in the virtual environment."""
 
     @classmethod
     def get_latest_artifact_version_from_pypi(cls, product_name: str) -> str | None:
@@ -148,86 +153,36 @@ class WheelInstaller(TranspilerInstaller):
         return self._post_install(version)
 
     def _create_venv(self) -> None:
-        with chdir(self._install_path):
-            self._unsafe_create_venv()
-
-    def _unsafe_create_venv(self) -> None:
-        # using the venv module doesn't work (maybe it's not possible to create a venv from a venv ?)
-        # so falling back to something that works
-        # for some reason this requires shell=True, so pass full cmd line
-        cmd_line = f"{sys.executable} -m venv .venv"
-        completed = run(cmd_line, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=False)
-        if completed.returncode:
-            logger.error(f"Failed to create venv, error code: {completed.returncode}")
-            if completed.stdout:
-                for line in completed.stdout:
-                    logger.error(line)
-            if completed.stderr:
-                for line in completed.stderr:
-                    logger.error(line)
-        completed.check_returncode()
-        self._venv = self._install_path / ".venv"
-        self._site_packages = self._locate_site_packages()
-
-    def _locate_site_packages(self) -> Path:
-        # can't use sysconfig because it only works for currently running python
-        if sys.platform == "win32":
-            return self._locate_site_packages_windows()
-        return self._locate_site_packages_linux_or_macos()
-
-    def _locate_site_packages_windows(self) -> Path:
-        packages = self._venv / "Lib" / "site-packages"
-        if packages.exists():
-            return packages
-        raise ValueError(f"Could not locate 'site-packages' for {self._venv!s}")
-
-    def _locate_site_packages_linux_or_macos(self) -> Path:
-        lib = self._venv / "lib"
-        for dir_ in os.listdir(lib):
-            if dir_.startswith("python"):
-                packages = lib / dir_ / "site-packages"
-                if packages.exists():
-                    return packages
-        raise ValueError(f"Could not locate 'site-packages' for {self._venv!s}")
+        venv_path = self._install_path / ".venv"
+        # Sadly, some platform-specific variations need to be dealt with:
+        #   - Windows venvs do not use symlinks, but rather copies, when populating the venv.
+        #   - The library path is different.
+        if use_symlinks := sys.platform != "win32":
+            major, minor = sys.version_info[:2]
+            lib_path = venv_path / "lib" / f"python{major}.{minor}" / "site-packages"
+        else:
+            lib_path = venv_path / "Lib" / "site-packages"
+        builder = venv.EnvBuilder(with_pip=True, prompt=f"{self._product_name}", symlinks=use_symlinks)
+        builder.create(venv_path)
+        context = builder.ensure_directories(venv_path)
+        logger.debug(f"Created virtual environment with context: {context}")
+        self._venv_exec_cmd = context.env_exec_cmd
+        self._site_packages = lib_path
 
     def _install_with_pip(self) -> None:
-        with chdir(self._install_path):
-            # the way to call pip from python is highly sensitive to os and source type
-            if self._artifact:
-                self._install_local_artifact()
-            else:
-                self._install_remote_artifact()
-
-    def _install_local_artifact(self) -> None:
-        pip = self._locate_pip()
-        pip = pip.relative_to(self._install_path)
-        target = self._site_packages
-        target = target.relative_to(self._install_path)
-        if sys.platform == "win32":
-            command = f"{pip!s} install {self._artifact!s} -t {target!s}"
-            completed = run(command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, shell=False, check=False)
-        else:
-            command = f"'{pip!s}' install '{self._artifact!s}' -t '{target!s}'"
-            completed = run(command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=False)
-        # checking return code later makes debugging easier
-        completed.check_returncode()
-
-    def _install_remote_artifact(self) -> None:
-        pip = self._locate_pip()
-        pip = pip.relative_to(self._install_path)
-        target = self._site_packages
-        target = target.relative_to(self._install_path)
-        if sys.platform == "win32":
-            args = [str(pip), "install", self._pypi_name, "-t", str(target)]
-            completed = run(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, shell=False, check=False)
-        else:
-            command = f"'{pip!s}' install {self._pypi_name} -t '{target!s}'"
-            completed = run(command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=False)
-        # checking return code later makes debugging easier
-        completed.check_returncode()
-
-    def _locate_pip(self) -> Path:
-        return self._venv / "Scripts" / "pip3.exe" if sys.platform == "win32" else self._venv / "bin" / "pip3"
+        # Based on: https://pip.pypa.io/en/stable/user_guide/#using-pip-from-your-program
+        # (But with venv_exec_cmd instead of sys.executable, so that we use the venv's pip.)
+        to_install: Path | str = self._artifact if self._artifact is not None else self._pypi_name
+        command: list[Path | str] = [
+            self._venv_exec_cmd,
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            to_install,
+        ]
+        result = run(command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, check=False)
+        result.check_returncode()
 
     def _copy_lsp_resources(self):
         lsp = self._site_packages / "lsp"

@@ -5,8 +5,8 @@ from databricks.sdk import WorkspaceClient
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.install import MavenInstaller
 from databricks.labs.lakebridge.transpiler.execute import transpile
+from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
-from databricks.labs.lakebridge.transpiler.transpile_engine import TranspileEngine
 
 
 async def test_transpiles_all_dbt_project_files(ws: WorkspaceClient, tmp_path: Path) -> None:
@@ -23,7 +23,7 @@ async def _transpile_all_dbt_project_files(
 ) -> None:
     MavenInstaller(transpiler_repository, "morpheus", "com.databricks.labs", "databricks-morph-plugin").install()
     config_path = transpiler_repository.transpiler_config_path("Morpheus")
-    lsp_engine = TranspileEngine.load_engine(config_path)
+    lsp_engine = LSPEngine.from_config_path(config_path)
     input_source = Path(__file__).parent.parent.parent / "resources" / "functional" / "dbt"
 
     transpile_config = TranspileConfig(
