@@ -1,10 +1,14 @@
 import tempfile
 from pathlib import Path
 
+from databricks.sdk.core import with_user_agent_extra
+
 from databricks.labs.blueprint.entrypoint import get_logger
 from databricks.labs.blueprint.tui import Prompts
 
 from databricks.labs.bladespector.analyzer import Analyzer, _PLATFORM_TO_SOURCE_TECHNOLOGY
+
+from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
 from databricks.labs.lakebridge.helpers.file_utils import check_path, move_tmp_file
 
 logger = get_logger(__file__)
@@ -40,6 +44,7 @@ class LakebridgeAnalyzer(Analyzer):
             if platform is not None:
                 logger.warning(f"Invalid source technology {platform}")
             platform = self._prompts.choice("Select the source technology", self.supported_source_technologies())
+            with_user_agent_extra("analyzer_source_tech", make_alphanum_or_semver(platform))
         return _PLATFORM_TO_SOURCE_TECHNOLOGY[platform]
 
     @staticmethod
