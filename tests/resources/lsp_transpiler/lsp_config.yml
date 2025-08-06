@@ -6,7 +6,7 @@ remorph:
   environment:
     SOME_ENV: abc
   command_line:
-    - python
+    - python3
     - lsp_server.py
     - --stuff=12
 options:
