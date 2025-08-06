@@ -137,4 +137,4 @@ class ApplicationContext:
     @cached_property
     def analyzer(self):
         is_debug = logger.getEffectiveLevel() == logging.DEBUG
-        return LakebridgeAnalyzer(self.prompts, is_debug)
+        return LakebridgeAnalyzer(self.current_user, self.prompts, is_debug)
