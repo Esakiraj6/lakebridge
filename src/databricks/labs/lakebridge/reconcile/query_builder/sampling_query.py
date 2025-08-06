@@ -4,7 +4,8 @@ import sqlglot.expressions as exp
 from pyspark.sql import DataFrame
 from sqlglot import select
 
-from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_key_from_dialect
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
+from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_key_from_dialect, get_dialect
 from databricks.labs.lakebridge.reconcile.query_builder.base import QueryBuilder
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
     build_column,
@@ -38,11 +39,14 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(this=col, alias=self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer))
+            build_column(this=col, alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)))
             for col in cols
         ]
 
-        query = select(*cols_with_alias).from_(":tbl").where(self.filter).sql(dialect=self.engine)
+        query = (select(*cols_with_alias, dialect=get_dialect("databricks"))
+                 .from_(":tbl")
+                 .where(self.filter, dialect=get_dialect("databricks"))
+                 .sql(dialect=self.engine))
 
         logger.info(f"Sampling Query with Alias for {self.layer}: {query}")
         return query
