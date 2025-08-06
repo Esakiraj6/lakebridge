@@ -4,6 +4,7 @@ import abc
 import asyncio
 import logging
 import os
+import shutil
 import sys
 import venv
 from collections.abc import Callable, Sequence, Mapping
@@ -434,25 +435,34 @@ class LSPEngine(TranspileEngine):
         self._init_response = await self._client.initialize_async(params)
 
     async def _start_server(self) -> None:
-        env: Mapping[str, str] = os.environ | self._config.remorph.env_vars
-        match self._config.remorph.command_line:
-            case [executable, *args] if executable in {"python", "python3"}:
-                executable = self._get_python_command(executable)
-            case [executable, *args]:
-                pass
-            case _:
-                raise ValueError(f"Missing command line for LSP server: {self._config.path}")
+        env: dict[str, str] = os.environ | self._config.remorph.env_vars
+        path = env.get("PATH", os.defpath)
+
+        # If we have a virtual environment, ensure the bin directory is first on the PATH. This takes care of
+        # not only the python executables, but also any entry-points that the LSP server may have installed.
+        if (extra_path := self._additional_venv_path_needed()) is not None:
+            # Ensure PATH is in sync with the search path we will use to locate the LSP server executable.
+            env["PATH"] = path = f"{extra_path}{os.pathsep}{path}"
+        logger.debug(f"Using PATH for launching LSP server: {path}")
+
+        # Locate the LSP server executable in a platform-independent way.
+        if not (command_line := self._config.remorph.command_line):
+            raise ValueError(f"Missing command line for LSP server: {self._config.path}")
+        executable, *args = command_line
+        executable = shutil.which(executable, path=path) or executable
+
         await self._launch_executable(executable, args, env)
 
-    def _get_python_command(self, executable: str) -> str:
+    def _additional_venv_path_needed(self) -> Path | None:
+        """Check whether the search path needs to be extended with the bin/script directory of a virtual environment."""
         venv_path = self._workdir / ".venv"
-        # Tests run without a virtual environment.
-        if venv_path.exists():
-            use_symlinks = sys.platform != "win32"
-            builder = venv.EnvBuilder(symlinks=use_symlinks)
-            context = builder.ensure_directories(venv_path)
-            executable = context.env_exec_cmd
-        return executable
+        if not venv_path.exists():
+            return None
+        logger.debug(f"Detected virtual environment to use at: {venv_path}")
+        use_symlinks = sys.platform != "win32"
+        builder = venv.EnvBuilder(symlinks=use_symlinks)
+        context = builder.ensure_directories(venv_path)
+        return context.bin_path
 
     async def _launch_executable(self, executable: str, args: Sequence[str], env: Mapping[str, str]) -> None:
         log_level = logging.getLevelName(logging.getLogger("databricks").level)
