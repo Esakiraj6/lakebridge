@@ -22,9 +22,9 @@ def test_get_profiler_extract_path(pipeline_config_path, failure_pipeline_config
     # Parse `extract_folder` **with** a trailing "/" character
     expected_db_path = "/tmp/extracts/profiler_extract.db"
     profiler_db_path = get_profiler_extract_path(pipeline_config_path)
-    assert(profiler_db_path == expected_db_path)
+    assert profiler_db_path == expected_db_path
 
     # Parse `extract_folder` **without** a trailing "/" character
     expected_db_path = "tests/resources/assessments/profiler_extract.db"
     profiler_db_path = get_profiler_extract_path(failure_pipeline_config_path)
-    assert(profiler_db_path == expected_db_path)
+    assert profiler_db_path == expected_db_path
