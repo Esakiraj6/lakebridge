@@ -1,5 +1,10 @@
+import os
 from dataclasses import dataclass
 from duckdb import DuckDBPyConnection
+
+from databricks.labs.lakebridge.assessments.pipeline import PipelineClass
+
+PROFILER_DB_NAME = "profiler_extract.db"
 
 
 @dataclass(frozen=True)
@@ -66,6 +71,20 @@ class EmptyTableValidationCheck(ValidationStrategy):
         else:
             outcome = "FAIL"
         return ValidationOutcome(self.table, None, self.name, outcome, self.severity)
+
+
+def get_profiler_extract_path(pipeline_config_path: str) -> str:
+    """
+    Returns the filesystem path of the profiler extract database.
+    input:
+       pipeline_config_path: the location of the pipeline definition .yml file
+    returns:
+       the filesystem path to the profiler extract database
+    """
+    pipeline_config = PipelineClass.load_config_from_yaml(pipeline_config_path)
+    normalized_db_path = os.path.normpath(pipeline_config.extract_folder)
+    database_path = f"{normalized_db_path}/{PROFILER_DB_NAME}"
+    return database_path
 
 
 def build_validation_report(
