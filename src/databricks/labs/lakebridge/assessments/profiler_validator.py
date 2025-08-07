@@ -1,12 +1,11 @@
-from typing import List
 from dataclasses import dataclass
-from pyspark.sql import (SparkSession, DataFrame)
 from duckdb import DuckDBPyConnection
 
 
 @dataclass(frozen=True)
 class ValidationOutcome:
     """A data class that holds the outcome of a table validation check."""
+
     table: str
     column: str | None
     strategy: str
@@ -36,8 +35,12 @@ class NullValidationCheck(ValidationStrategy):
         input:
           connection: a DuckDB connection object
         """
-        row_count = connection.execute(f"SELECT COUNT(*) FROM {self.table} WHERE {self.column} IS NULL").fetchone()[0]
-        outcome = "PASS" if row_count > 0 else "FAIL"
+        result = connection.execute(f"SELECT COUNT(*) FROM {self.table} WHERE {self.column} IS NULL").fetchone()
+        if result:
+            row_count = result[0]
+            outcome = "PASS" if row_count > 0 else "FAIL"
+        else:
+            outcome = "FAIL"
         return ValidationOutcome(self.table, self.column, self.name, outcome, self.severity)
 
 
@@ -56,13 +59,18 @@ class EmptyTableValidationCheck(ValidationStrategy):
         returns:
           a ValidationOutcome object
         """
-        row_count = connection.execute(f"SELECT COUNT(*) FROM {self.table}").fetchone()[0]
-        outcome = "PASS" if row_count > 0 else "FAIL"
+        result = connection.execute(f"SELECT COUNT(*) FROM {self.table}").fetchone()
+        if result:
+            row_count = result[0]
+            outcome = "PASS" if row_count > 0 else "FAIL"
+        else:
+            outcome = "FAIL"
         return ValidationOutcome(self.table, None, self.name, outcome, self.severity)
 
 
-def build_validation_report(validations: List[ValidationStrategy],
-                            connection: DuckDBPyConnection) -> list[ValidationOutcome]:
+def build_validation_report(
+    validations: list[ValidationStrategy], connection: DuckDBPyConnection
+) -> list[ValidationOutcome]:
     """
     Builds a list of ValidationOutcomes from list of validation checks.
     input:
@@ -71,6 +79,6 @@ def build_validation_report(validations: List[ValidationStrategy],
     returns: a list of ValidationOutcomes
     """
     validation_report = []
-    for v in validations:
-        validation_report.append(v.validate(connection))
+    for validation in validations:
+        validation_report.append(validation.validate(connection))
     return validation_report
