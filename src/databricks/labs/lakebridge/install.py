@@ -25,6 +25,7 @@ from databricks.labs.blueprint.wheels import ProductInfo
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound, PermissionDenied
 
+from databricks.labs.lakebridge.__about__ import __version__
 from databricks.labs.lakebridge.config import (
     DatabaseConfig,
     ReconcileConfig,
@@ -32,6 +33,7 @@ from databricks.labs.lakebridge.config import (
     ReconcileMetadataConfig,
     TranspileConfig,
 )
+from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.deployment.configurator import ResourceConfigurator
 from databricks.labs.lakebridge.deployment.installation import WorkspaceInstallation
 from databricks.labs.lakebridge.reconcile.constants import ReconReportType, ReconSourceType
@@ -798,3 +800,28 @@ class WorkspaceInstaller:
 
     def _has_necessary_access(self, catalog_name: str, schema_name: str, volume_name: str | None = None):
         self._resource_configurator.has_necessary_access(catalog_name, schema_name, volume_name)
+
+
+def installer(ws: WorkspaceClient, transpiler_repository: TranspilerRepository) -> WorkspaceInstaller:
+    app_context = ApplicationContext(_verify_workspace_client(ws))
+    return WorkspaceInstaller(
+        app_context.workspace_client,
+        app_context.prompts,
+        app_context.installation,
+        app_context.install_state,
+        app_context.product_info,
+        app_context.resource_configurator,
+        app_context.workspace_installation,
+        transpiler_repository=transpiler_repository,
+    )
+
+
+def _verify_workspace_client(ws: WorkspaceClient) -> WorkspaceClient:
+    """Verifies the workspace client configuration, ensuring it has the correct product info."""
+
+    # Using reflection to set right value for _product_info for telemetry
+    product_info = getattr(ws.config, '_product_info')
+    if product_info[0] != "lakebridge":
+        setattr(ws.config, '_product_info', ('lakebridge', __version__))
+
+    return ws
