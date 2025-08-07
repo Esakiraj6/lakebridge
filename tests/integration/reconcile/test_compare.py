@@ -251,29 +251,30 @@ def test_capture_mismatch_data_and_cols_fail(mock_spark):
         "columns missing in target: s_nationkey,s_name,s_address,s_phone,s_acctbal\n"
     )
 
-def test_compare_data_special_column_names(mock_spark,tmp_path: Path):
+
+def test_compare_data_special_column_names(mock_spark, tmp_path: Path):
     model_with_hash = Row("s_supp#", "s_nation#", "hash_value_recon")
     model = Row("s_supp#", "s_nation#")
     source = mock_spark.createDataFrame(
         [
-            model_with_hash(1,11,'1a1'),
-            model_with_hash(2,22,'2b2'),
-            model_with_hash(3,33,'3c3'),
-            model_with_hash(5,55,'5e5'),
+            model_with_hash(1, 11, '1a1'),
+            model_with_hash(2, 22, '2b2'),
+            model_with_hash(3, 33, '3c3'),
+            model_with_hash(5, 55, '5e5'),
         ]
     )
     target = mock_spark.createDataFrame(
         [
-            model_with_hash(1,11,'1a1'),
-            model_with_hash(2,22,'2b4'),
-            model_with_hash(4,44,'4d4'),
-            model_with_hash(5,56,'5e6'),
+            model_with_hash(1, 11, '1a1'),
+            model_with_hash(2, 22, '2b4'),
+            model_with_hash(4, 44, '4d4'),
+            model_with_hash(5, 56, '5e6'),
         ]
     )
 
-    mismatch = MismatchOutput(mismatch_df=mock_spark.createDataFrame([model(2,22)]))
-    missing_in_src = mock_spark.createDataFrame([model(4,44), model(5,56)])
-    missing_in_tgt = mock_spark.createDataFrame([model(3,33), model(5,55)])
+    mismatch = MismatchOutput(mismatch_df=mock_spark.createDataFrame([model(2, 22)]))
+    missing_in_src = mock_spark.createDataFrame([model(4, 44), model(5, 56)])
+    missing_in_tgt = mock_spark.createDataFrame([model(3, 33), model(5, 55)])
 
     actual = reconcile_data(
         source=source,
@@ -302,21 +303,22 @@ def test_compare_data_special_column_names(mock_spark,tmp_path: Path):
     assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src)
     assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt)
 
+
 def test_capture_mismatch_data_and_cols_special_column_names(mock_spark):
     model = Row("s_supp#", "s_nation#", "s$name")
     expected_model = Row("s_supp#", "s_nation#", "s$name_base", "s$name_compare", "s$name_match")
     source = mock_spark.createDataFrame(
         [
-            model(2,22,'2b2'),
-            model(3,33,'3c3'),
-            model(5,55,'5e5'),
+            model(2, 22, '2b2'),
+            model(3, 33, '3c3'),
+            model(5, 55, '5e5'),
         ]
     )
     target = mock_spark.createDataFrame(
         [
-            model(2,22,'2b4'),
-            model(3,33,'3c3'),
-            model(4,44,'4d4'),
+            model(2, 22, '2b4'),
+            model(3, 33, '3c3'),
+            model(4, 44, '4d4'),
         ]
     )
 

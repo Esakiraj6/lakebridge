@@ -11,9 +11,9 @@ class DialectUtils:
 
     @staticmethod
     def ansi_normalize_identifier(identifier: str) -> str:
-        return DialectUtils.normalize_identifier(identifier,
-                                                 DialectUtils._ANSI_IDENTIFIER_DELIMITER,
-                                                 DialectUtils._ANSI_IDENTIFIER_DELIMITER).ansi_normalized
+        return DialectUtils.normalize_identifier(
+            identifier, DialectUtils._ANSI_IDENTIFIER_DELIMITER, DialectUtils._ANSI_IDENTIFIER_DELIMITER
+        ).ansi_normalized
 
     @staticmethod
     def normalize_identifier(
