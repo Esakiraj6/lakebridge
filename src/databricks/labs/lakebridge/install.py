@@ -447,6 +447,13 @@ class WorkspaceInstaller:
         logger.info("Installation completed successfully! Please refer to the documentation for the next steps.")
         return config
 
+    def detect_upgrade(self) -> bool:
+        """Detect whether there are transpilers that need to be upgraded or not."""
+        installed_transpilers = self._transpiler_repository.all_transpiler_names()
+        if installed_transpilers:
+            logger.info(f"Detected installed transpilers: {sorted(installed_transpilers)}")
+        return bool(installed_transpilers)
+
     def install_bladebridge(self, artifact: Path | None = None) -> None:
         local_name = "bladebridge"
         pypi_name = "databricks-bb-plugin"
