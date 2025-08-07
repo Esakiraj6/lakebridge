@@ -74,20 +74,3 @@ def build_validation_report(validations: List[ValidationStrategy],
     for v in validations:
         validation_report.append(v.validate(connection))
     return validation_report
-
-
-def build_spark_validation_report(validations: List[ValidationStrategy],
-                                  connection: DuckDBPyConnection,
-                                  spark: SparkSession) -> DataFrame:
-    """
-    Builds a Spark DataFrame containing the validation report.
-    input:
-      validations: a list of ValidationStrategy objects
-      connection: a DuckDB connection object
-    returns: a Spark DataFrame with the validation outcomes
-    """
-    report = build_validation_report(validations, connection)
-    data = list(map(lambda x: (x.table, x.column, x.strategy, x.outcome, x.severity), report))
-    schema = "table STRING, column STRING, strategy STRING, outcome STRING, severity STRING"
-    report_df = spark.createDataFrame(data, schema)
-    return report_df
