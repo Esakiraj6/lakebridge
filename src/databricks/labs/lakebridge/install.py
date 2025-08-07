@@ -266,14 +266,14 @@ class WheelInstaller(TranspilerInstaller):
             raise ValueError("Installed transpiler is missing a 'config.yml' file in its 'lsp' folder")
         install_ext = "ps1" if sys.platform == "win32" else "sh"
         install_script = f"installer.{install_ext}"
-        installer = self._install_path / install_script
-        if installer.exists():
-            self._run_custom_installer(installer)
+        installer_path = self._install_path / install_script
+        if installer_path.exists():
+            self._run_custom_installer(installer_path)
         return self._install_path
 
-    def _run_custom_installer(self, installer):
-        args = [str(installer)]
-        run(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, cwd=str(self._install_path), check=True)
+    def _run_custom_installer(self, installer_path: Path) -> None:
+        args = [installer_path]
+        run(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, cwd=self._install_path, check=True)
 
 
 class MavenInstaller(TranspilerInstaller):
