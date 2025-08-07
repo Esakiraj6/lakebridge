@@ -31,7 +31,7 @@ from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.helpers.recon_config_utils import ReconConfigPrompts
 from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
-from databricks.labs.lakebridge.install import WorkspaceInstaller, installer
+from databricks.labs.lakebridge.install import installer
 from databricks.labs.lakebridge.reconcile.runner import ReconcileRunner
 from databricks.labs.lakebridge.lineage import lineage_generator
 from databricks.labs.lakebridge.reconcile.recon_config import RECONCILE_OPERATION_NAME, AGG_RECONCILE_OPERATION_NAME
@@ -49,10 +49,6 @@ logger = get_logger(__file__)
 
 def raise_validation_exception(msg: str) -> NoReturn:
     raise ValueError(msg)
-
-
-def _installer(ws: WorkspaceClient, transpiler_repository: TranspilerRepository) -> WorkspaceInstaller:
-    return installer(ws, transpiler_repository)
 
 
 def _create_warehouse(ws: WorkspaceClient) -> str:
