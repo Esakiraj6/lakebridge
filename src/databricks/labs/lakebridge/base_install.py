@@ -23,6 +23,8 @@ def main() -> None:
         logger.warning(
             "Detected existing Lakebridge transpilers; run `databricks labs lakebridge install-transpile` to upgrade them."
         )
+    else:
+        logger.debug("No existing Lakebridge transpilers detected; assuming fresh installation.")
 
     logger.info("Successfully Setup Lakebridge Components Locally")
     logger.info("For more information, please visit https://databrickslabs.github.io/lakebridge/")
