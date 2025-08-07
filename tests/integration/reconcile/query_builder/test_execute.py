@@ -160,8 +160,8 @@ def query_store(mock_spark):
 def query_store_normalized(mock_spark):
     source_hash_query = "SELECT LOWER(SHA2(CONCAT(TRIM(`s$address`), TRIM(`s$name`), COALESCE(TRIM(`s$nationkey`), '_null_recon_'), TRIM(`s$phone`), COALESCE(TRIM(`s$suppkey`), '_null_recon_')), 256)) AS hash_value_recon, `s$nationkey` AS `s$nationkey`, `s$suppkey` AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address` = 'a'"
     target_hash_query = "SELECT LOWER(SHA2(CONCAT(TRIM(`s$address_t`), TRIM(`s$name`), COALESCE(TRIM(`s$nationkey_t`), '_null_recon_'), TRIM(`s$phone_t`), COALESCE(TRIM(`s$suppkey_t`), '_null_recon_')), 256)) AS hash_value_recon, `s$nationkey_t` AS `s$nationkey`, `s$suppkey_t` AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address_t` = 'a'"
-    source_mismatch_query = "WITH recon AS (SELECT CAST(22 AS number) AS s$nationkey, CAST(2 AS number) AS s$suppkey), src AS (SELECT TRIM(s_address) AS s$address, TRIM(s_name) AS s$name, COALESCE(TRIM(s_nationkey), '_null_recon_') AS s$nationkey, TRIM(s_phone) AS s$phone, COALESCE(TRIM(s_suppkey), '_null_recon_') AS s$suppkey FROM :tbl WHERE s$name = 't' AND s$address = 'a') SELECT src.s_address, src.s_name, src.s_nationkey, src.s_phone, src.s_suppkey FROM src INNER JOIN recon AS recon ON src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
-    target_mismatch_query = "WITH recon AS (SELECT 22 AS s$nationkey, 2 AS s$suppkey), src AS (SELECT TRIM(s_address_t) AS s$address, TRIM(s_name) AS s$name, COALESCE(TRIM(s_nationkey_t), '_null_recon_') AS s$nationkey, TRIM(s_phone_t) AS s$phone, COALESCE(TRIM(s_suppkey_t), '_null_recon_') AS s$suppkey FROM :tbl WHERE s$name = 't' AND s$address_t = 'a') SELECT src.s_address, src.s_name, src.s_nationkey, src.s_phone, src.s_suppkey FROM src INNER JOIN recon AS recon ON src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
+    source_mismatch_query = "WITH recon AS (SELECT 22 AS `s$nationkey`, 2 AS `s$suppkey`), src AS (SELECT TRIM(`s$address`) AS `s$address`, TRIM(`s$name`) AS `s$name`, COALESCE(TRIM(`s$nationkey`), '_null_recon_') AS `s$nationkey`, TRIM(`s$phone`) AS `s$phone`, COALESCE(TRIM(`s$suppkey`), '_null_recon_') AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address` = 'a') SELECT src.`s$address`, src.`s$name`, src.`s$nationkey`, src.`s$phone`, src.`s$suppkey` FROM src INNER JOIN recon AS recon ON src.`s$nationkey` = recon.`s$nationkey` AND src.`s$suppkey` = recon.`s$suppkey`"
+    target_mismatch_query = "WITH recon AS (SELECT 22 AS `s$nationkey`, 2 AS `s$suppkey`), src AS (SELECT TRIM(`s$address_t`) AS `s$address`, TRIM(`s$name`) AS `s$name`, COALESCE(TRIM(`s$nationkey_t`), '_null_recon_') AS `s$nationkey`, TRIM(`s$phone_t`) AS `s$phone`, COALESCE(TRIM(`s$suppkey_t`), '_null_recon_') AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address_t` = 'a') SELECT src.`s$address`, src.`s$name`, src.`s$nationkey`, src.`s$phone`, src.`s$suppkey` FROM src INNER JOIN recon AS recon ON src.`s$nationkey` = recon.`s$nationkey` AND src.`s$suppkey` = recon.`s$suppkey`"
     source_missing_query = "WITH recon AS (SELECT 44 AS s$nationkey, 4 AS s$suppkey), src AS (SELECT TRIM(s_address_t) AS s$address, TRIM(s_name) AS s$name, COALESCE(TRIM(s_nationkey_t), '_null_recon_') AS s$nationkey, TRIM(s_phone_t) AS s$phone, COALESCE(TRIM(s_suppkey_t), '_null_recon_') AS s$suppkey FROM :tbl WHERE s$name = 't' AND s$address_t = 'a') SELECT src.s_address, src.s_name, src.s_nationkey, src.s_phone, src.s_suppkey FROM src INNER JOIN recon AS recon ON src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     target_missing_query = "WITH recon AS (SELECT CAST(33 AS number) AS s$nationkey, CAST(3 AS number) AS s$suppkey), src AS (SELECT TRIM(s_address) AS s$address, TRIM(s_name) AS s$name, COALESCE(TRIM(s_nationkey), '_null_recon_') AS s$nationkey, TRIM(s_phone) AS s$phone, COALESCE(TRIM(s_suppkey), '_null_recon_') AS s$suppkey FROM :tbl WHERE s$name = 't' AND s$address = 'a') SELECT src.s_address, src.s_name, src.s_nationkey, src.s_phone, src.s_suppkey FROM src INNER JOIN recon AS recon ON src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     source_threshold_query = "SELECT s$nationkey AS s$nationkey, s$suppkey AS s$suppkey, s$acctbal AS s$acctbal FROM :tbl WHERE s$name = 't' AND s$address = 'a'"
@@ -195,7 +195,7 @@ def query_store_normalized(mock_spark):
         target_record_count_query="SELECT COUNT(1) AS count FROM :tbl WHERE s_name = 't' AND s_address_t = 'a'",
     )
     sampling_queries = SamplingQueries(
-        target_sampling_query="SELECT s_address_t AS s_address, s_name AS s_name, s_nationkey_t AS s_nationkey, s_phone_t AS s_phone, s_suppkey_t AS s_suppkey FROM :tbl WHERE s_name = 't' AND s_address_t = 'a'"
+        target_sampling_query="SELECT `s$address_t` AS `s$address`, `s$name` AS `s$name`, `s$nationkey_t` AS `s$nationkey`, `s$phone_t` AS `s$phone`, `s$suppkey_t` AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address_t` = 'a'"
     )
 
     return QueryStore(
@@ -2117,8 +2117,8 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
 ):
     src_schema, tgt_schema = table_schema_with_special_chars
     repo_model = Row("hash_value_recon", "s$nationkey", "s$suppkey")
-    query_model = Row("s$address", "s$name", "s$nationkey", "s$phone", "s$supp_key")
-    threshold_query_model = Row("s$nationkey", "s$supp_key", "s$acctbal")
+    query_model = Row("s$address", "s$name", "s$nationkey", "s$phone", "s$suppkey")
+    threshold_query_model = Row("s$nationkey", "s$suppkey", "s$acctbal")
     compare_query_model = Row("s$acctbal_source", "s$acctbal_databricks", "s$acctbal_match", "s$nationkey_source", "s$suppkey_source")
     mismatch_model = Row(
         "s$suppkey",

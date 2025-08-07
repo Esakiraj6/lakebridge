@@ -39,7 +39,10 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(this=col, alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)))
+            build_column(this=DialectUtils.ansi_normalize_identifier(col),
+                         alias=DialectUtils.unnormalize_identifier(
+                             self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
+                         quoted=True)
             for col in cols
         ]
 
@@ -64,17 +67,19 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(this=col, alias=self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer))
+            build_column(this=col,
+                         alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
+                         quoted=True)
             for col in cols
         ]
 
         sql_with_transforms = self.add_transformations(cols_with_alias, self.engine)
-        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter)
+        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter, dialect=get_dialect("databricks"))
         if self.layer == "source":
-            with_select = [build_column(this=col, table_name="src") for col in sorted(cols)]
+            with_select = [build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True) for col in sorted(cols)]
         else:
             with_select = [
-                build_column(this=col, table_name="src")
+                build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)
                 for col in sorted(self.table_conf.get_tgt_to_src_col_mapping_list(cols))
             ]
 
@@ -110,12 +115,13 @@ class SamplingQueryBuilder(QueryBuilder):
                 (
                     build_literal(
                         this=str(value),
-                        alias=col,
+                        alias=DialectUtils.unnormalize_identifier(col),
                         is_string=_get_is_string(column_types_dict, col),
                         cast=orig_types_dict.get(col),
+                        quoted=True,
                     )
                     if value is not None
-                    else exp.Alias(this=exp.Null(), alias=col)
+                    else exp.Alias(this=exp.Null(), alias=DialectUtils.unnormalize_identifier(col), quoted=True)
                 )
                 for col, value in zip(df.columns, row)
             ]
