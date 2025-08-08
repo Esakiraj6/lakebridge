@@ -19,7 +19,7 @@ def main() -> None:
         WorkspaceClient(product="lakebridge", product_version=__version__),
         transpiler_repository=TranspilerRepository.user_home(),
     )
-    if installer.detect_upgrade():
+    if installer.has_installed_transpilers():
         logger.warning(
             "Detected existing Lakebridge transpilers; run `databricks labs lakebridge install-transpile` to upgrade them."
         )

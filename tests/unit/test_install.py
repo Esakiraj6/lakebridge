@@ -1466,7 +1466,7 @@ def test_installer_upgrade_detection(
     is_upgrade: bool,
     caplog,
 ) -> None:
-    """Check that upgrade detection is based on whether transpilers are already installed."""
+    """Check detection of whether transpilers are already installed or not."""
     mock_repository = create_autospec(TranspilerRepository)
     mock_repository.all_transpiler_names.return_value = installed_transpilers
     ctx = ApplicationContext(ws)
@@ -1483,7 +1483,7 @@ def test_installer_upgrade_detection(
     )
 
     with caplog.at_level(logging.INFO):
-        result = installer.detect_upgrade()
+        result = installer.has_installed_transpilers()
 
     assert result == is_upgrade
     if is_upgrade:
