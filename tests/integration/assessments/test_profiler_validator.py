@@ -53,4 +53,7 @@ def test_validate_non_empty_tables(mock_synapse_profiler_extract):
             empty_check = EmptyTableValidationCheck(fq_table_name)
             validation_checks.append(empty_check)
         report = build_validation_report(validation_checks, duck_conn)
+        print(report)
+        num_failures = len(list(filter(lambda row: row.outcome == "FAIL", report)))
         assert len(report) == 3
+        assert num_failures == 1

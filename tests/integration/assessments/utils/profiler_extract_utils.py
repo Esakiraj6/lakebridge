@@ -18,7 +18,7 @@ class SynapseProfilerBuilder:
     def _create_all_tables(self) -> None:
         for table_name, config in self.table_definitions.items():
             schema = config["schema"]
-            sql_stmnt = f"CREATE TABLE IF NOT EXISTS {table_name} ({schema});"
+            sql_stmnt = f"CREATE OR REPLACE TABLE {table_name} ({schema});"
             try:
                 self.conn.execute(sql_stmnt)
             except Exception as e:
@@ -26,10 +26,11 @@ class SynapseProfilerBuilder:
                 print(sql_stmnt)
                 raise (e)
 
-    def create_sample_data(self, count=25) -> None:
+    def create_sample_data(self) -> None:
         for table_name, config in self.table_definitions.items():
             generator = config["generator"]
-            for _ in range(count):
+            row_count = config["num_rows"]
+            for _ in range(row_count):
                 values = generator(self.fake)
                 placeholders = ", ".join(["?"] * len(values))
                 self.conn.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", values)
@@ -130,6 +131,7 @@ table_definitions = {
             pool_name VARCHAR
         """,
         "generator": generate_dedicated_sql_pool_metrics,
+        "num_rows": 1000,
     },
     "dedicated_storage_info": {
         "schema": """
@@ -139,6 +141,7 @@ table_definitions = {
             node_id BIGINT
         """,
         "generator": generate_dedicated_storage_info,
+        "num_rows": 0,  # Create an empty table for testing
     },
     "workspace_sql_pools": {
         "schema": """
@@ -155,6 +158,7 @@ table_definitions = {
             type VARCHAR
         """,
         "generator": generate_sql_pools,
+        "num_rows": 1000,
     },
 }
 
@@ -162,6 +166,6 @@ table_definitions = {
 def build_mock_synapse_extract() -> str:
     synapse_extract_path = "/tmp/data/synapse_assessment/mock_profiler_extract.db"
     builder = SynapseProfilerBuilder(table_definitions, synapse_extract_path)
-    builder.create_sample_data(25)
+    builder.create_sample_data()
     builder.shutdown()
     return synapse_extract_path
