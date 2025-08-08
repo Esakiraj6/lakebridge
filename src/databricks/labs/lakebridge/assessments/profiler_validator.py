@@ -43,7 +43,7 @@ class NullValidationCheck(ValidationStrategy):
         result = connection.execute(f"SELECT COUNT(*) FROM {self.table} WHERE {self.column} IS NULL").fetchone()
         if result:
             row_count = result[0]
-            outcome = "PASS" if row_count > 0 else "FAIL"
+            outcome = "FAIL" if row_count > 0 else "PASS"
         else:
             outcome = "FAIL"
         return ValidationOutcome(self.table, self.column, self.name, outcome, self.severity)

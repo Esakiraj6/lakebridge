@@ -163,8 +163,8 @@ table_definitions = {
 }
 
 
-def build_mock_synapse_extract() -> str:
-    synapse_extract_path = "/tmp/data/synapse_assessment/mock_profiler_extract.db"
+def build_mock_synapse_extract(extract_db_name: str) -> str:
+    synapse_extract_path = f"/tmp/data/synapse_assessment/{extract_db_name}.db"
     builder = SynapseProfilerBuilder(table_definitions, synapse_extract_path)
     builder.create_sample_data()
     builder.shutdown()
