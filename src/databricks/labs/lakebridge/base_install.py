@@ -21,7 +21,7 @@ def main() -> None:
     )
     if installer.has_installed_transpilers():
         logger.warning(
-            "Detected existing Lakebridge transpilers; run `databricks labs lakebridge install-transpile` to upgrade them."
+            "Detected existing Lakebridge transpilers; run 'databricks labs lakebridge install-transpile' to upgrade them."
         )
     else:
         logger.debug("No existing Lakebridge transpilers detected; assuming fresh installation.")
