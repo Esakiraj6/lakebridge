@@ -207,10 +207,11 @@ def build_sub(
     right_column_name: str,
     left_table_name: str | None = None,
     right_table_name: str | None = None,
+    quoted: bool = False,
 ) -> exp.Sub:
     return exp.Sub(
-        this=build_column(left_column_name, left_table_name),
-        expression=build_column(right_column_name, right_table_name),
+        this=build_column(left_column_name, left_table_name, quoted=quoted),
+        expression=build_column(right_column_name, right_table_name, quoted=quoted),
     )
 
 

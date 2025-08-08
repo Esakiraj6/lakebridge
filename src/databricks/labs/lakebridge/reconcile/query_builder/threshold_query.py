@@ -56,6 +56,7 @@ class ThresholdQueryBuilder(QueryBuilder):
                     left_table_name="source",
                     right_column_name=column,
                     right_table_name="databricks",
+                    quoted=False,
                 )
             ).transform(coalesce)
 
@@ -64,7 +65,10 @@ class ThresholdQueryBuilder(QueryBuilder):
             where_clause.append(where)
         # join columns
         for column in sorted(join_columns):
-            select_clause.append(build_column(this=column, alias=f"{column}_source", table_name="source"))
+            select_clause.append(build_column(this=column,
+                                              alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
+                                              table_name="source",
+                                              quoted=True))
         where = build_where_clause(where_clause)
 
         return select_clause, where
@@ -78,10 +82,18 @@ class ThresholdQueryBuilder(QueryBuilder):
         select_clause = []
         column = threshold.column_name
         select_clause.append(
-            build_column(this=column, alias=f"{column}_source", table_name="source").transform(coalesce)
+            build_column(this=column,
+                         alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
+                         table_name="source",
+                         quoted=True
+            ).transform(coalesce)
         )
         select_clause.append(
-            build_column(this=column, alias=f"{column}_databricks", table_name="databricks").transform(coalesce)
+            build_column(this=column,
+                         alias=f"{DialectUtils.unnormalize_identifier(column)}_databricks",
+                         table_name="databricks",
+                         quoted=True
+            ).transform(coalesce)
         )
         where_clause = exp.NEQ(this=base, expression=exp.Literal(this="0", is_string=False))
         return select_clause, where_clause
@@ -112,7 +124,9 @@ class ThresholdQueryBuilder(QueryBuilder):
             logger.error(error_message)
             raise ValueError(error_message)
 
-        select_clause.append(build_column(this=func(base=base, threshold=threshold), alias=f"{column}_match"))
+        select_clause.append(build_column(this=func(base=base, threshold=threshold),
+                                          alias=f"{DialectUtils.unnormalize_identifier(column)}_match",
+                                          quoted=True))
 
         return select_clause, where_clause
 
@@ -172,8 +186,8 @@ class ThresholdQueryBuilder(QueryBuilder):
                 ),
                 expression=exp.Is(
                     this=exp.Column(
-                        this=exp.Identifier(this=threshold.column_name, quoted=False),
-                        table=exp.Identifier(this='databricks'),
+                        this=threshold.column_name,
+                        table="databricks",
                     ),
                     expression=exp.Null(),
                 ),
