@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from dataclasses import dataclass
 from collections.abc import Callable
@@ -173,8 +174,10 @@ table_definitions = {
 
 
 def build_mock_synapse_extract(extract_db_name: str) -> str:
-    synapse_extract_path = f"/tmp/data/synapse_assessment/{extract_db_name}.db"
-    builder = SynapseProfilerBuilder(table_definitions, synapse_extract_path)
+    synapse_extract_path = "/tmp/data/synapse_assessment"
+    os.makedirs(synapse_extract_path, exist_ok=True)
+    full_synapse_extract_path = f"{synapse_extract_path}/{extract_db_name}.db"
+    builder = SynapseProfilerBuilder(table_definitions, full_synapse_extract_path)
     builder.create_sample_data()
     builder.shutdown()
-    return synapse_extract_path
+    return full_synapse_extract_path
