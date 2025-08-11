@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.connectors.tsql import TSQLServerDataSource
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException
@@ -182,6 +183,6 @@ def test_normalize_identifier():
     engine, spark, ws, scope = initial_setup()
     data_source = TSQLServerDataSource(engine, spark, ws, scope)
 
-    assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("[col1]") == "`col1`"  # T-SQL delimiter
-    assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter
+    assert data_source.normalize_identifier("col1") == NormalizedIdentifier("`col1`", "[col1]")
+    assert data_source.normalize_identifier("[col1]") == NormalizedIdentifier("`col1`", "[col1]")  # T-SQL delimiter
+    assert data_source.normalize_identifier("`col1`") == NormalizedIdentifier("`col1`", "[col1]")  # ANSI SQL delimiter

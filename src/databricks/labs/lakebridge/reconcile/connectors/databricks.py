@@ -8,7 +8,9 @@ from pyspark.sql.functions import col
 from sqlglot import Dialect
 
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
+from databricks.labs.lakebridge.reconcile.connectors.utils import DataSourceUtils
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -83,12 +85,12 @@ class DatabricksDataSource(DataSource, SecretsMixin):
             logger.info(f"Fetching Schema: Started at: {datetime.now()}")
             schema_metadata = self._spark.sql(schema_query).where("col_name not like '#%'").distinct().collect()
             logger.info(f"Schema fetched successfully. Completed at: {datetime.now()}")
-            return [Schema(field.col_name.lower(), field.data_type.lower()) for field in schema_metadata]
+            return [self._map_meta_column(field) for field in schema_metadata]
         except (RuntimeError, PySparkException) as e:
             return self.log_and_throw_exception(e, "schema", schema_query)
 
-    def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(
+    def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
+        return DataSourceUtils.normalize_identifier(
             identifier,
             source_start_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,
             source_end_delimiter=DatabricksDataSource._IDENTIFIER_DELIMITER,

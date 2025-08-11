@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.connectors.snowflake import SnowflakeDataSource
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException, InvalidSnowflakePemPrivateKey
@@ -316,6 +318,10 @@ def test_normalize_identifier():
     engine, spark, ws, scope = initial_setup()
     data_source = SnowflakeDataSource(engine, spark, ws, scope)
 
-    assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("\"col1\"") == "`col1`"  # Snowflake delimiter
-    assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter
+    assert data_source.normalize_identifier("col1") == NormalizedIdentifier("`col1`", "\"col1\"")
+    assert data_source.normalize_identifier("\"col1\"") == NormalizedIdentifier(
+        "`col1`", "\"col1\""
+    )  # Snowflake delimiter
+    assert data_source.normalize_identifier("`col1`") == NormalizedIdentifier(
+        "`col1`", "\"col1\""
+    )  # ANSI SQL delimiter

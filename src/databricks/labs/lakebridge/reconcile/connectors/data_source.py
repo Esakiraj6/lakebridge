@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from pyspark.sql import DataFrame
 
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.exception import DataSourceRuntimeException
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 
@@ -32,42 +33,20 @@ class DataSource(ABC):
         return NotImplemented
 
     @abstractmethod
-    def normalize_identifier(self, identifier: str) -> str:
-        return NotImplemented
-
-    @staticmethod
-    def _ansi_normalize_identifier(identifier: str, source_start_delimiter: str, source_end_delimiter: str):
-        return DataSource._normalize_identifier(identifier, source_start_delimiter, source_end_delimiter, "`", "`")
-
-    @staticmethod
-    def _normalize_identifier(
-        identifier: str,
-        source_start_delimiter: str,
-        source_end_delimiter: str,
-        expected_source_start_delimiter: str,
-        expected_source_end_delimiter: str,
-    ) -> str:
-        if identifier == "" or identifier is None:
-            return ""
-
-        if DataSource._is_already_delimited(identifier, expected_source_start_delimiter, expected_source_end_delimiter):
-            return identifier
-
-        if DataSource._is_already_delimited(identifier, source_start_delimiter, source_end_delimiter):
-            stripped_identifier = identifier.removeprefix(source_start_delimiter).removesuffix(source_end_delimiter)
-        else:
-            stripped_identifier = identifier
-        return f"{expected_source_start_delimiter}{stripped_identifier}{expected_source_end_delimiter}"
-
-    @staticmethod
-    def _is_already_delimited(identifier: str, start_delimiter: str, end_delimiter: str) -> bool:
-        return identifier.startswith(start_delimiter) and identifier.endswith(end_delimiter)
+    def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
+        pass
 
     @classmethod
     def log_and_throw_exception(cls, exception: Exception, fetch_type: str, query: str):
         error_msg = f"Runtime exception occurred while fetching {fetch_type} using {query} : {exception}"
         logger.warning(error_msg)
         raise DataSourceRuntimeException(error_msg) from exception
+
+    def _map_meta_column(self, meta_column) -> Schema:
+        name = meta_column.col_name
+        dtype = meta_column.data_type.strip().lower()
+        normalized = self.normalize_identifier(name)
+        return Schema(name, dtype, normalized.ansi_normalized, normalized.source_normalized)
 
 
 class MockDataSource(DataSource):
@@ -103,5 +82,5 @@ class MockDataSource(DataSource):
             return self.log_and_throw_exception(self._exception, "schema", f"({catalog}, {schema}, {table})")
         return mock_schema
 
-    def normalize_identifier(self, identifier: str) -> str:
-        return identifier
+    def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
+        return NormalizedIdentifier(identifier, identifier)

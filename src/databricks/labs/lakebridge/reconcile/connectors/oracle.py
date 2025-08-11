@@ -9,7 +9,9 @@ from sqlglot import Dialect
 
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
 from databricks.labs.lakebridge.reconcile.connectors.jdbc_reader import JDBCReaderMixin
+from databricks.labs.lakebridge.reconcile.connectors.models import NormalizedIdentifier
 from databricks.labs.lakebridge.reconcile.connectors.secrets import SecretsMixin
+from databricks.labs.lakebridge.reconcile.connectors.utils import DataSourceUtils
 from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions, Schema
 from databricks.sdk import WorkspaceClient
 
@@ -92,7 +94,7 @@ class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
             schema_metadata = df.select([col(c).alias(c.lower()) for c in df.columns]).collect()
             logger.info(f"Schema fetched successfully. Completed at: {datetime.now()}")
             logger.debug(f"schema_metadata: ${schema_metadata}")
-            return [Schema(field.column_name.lower(), field.data_type.lower()) for field in schema_metadata]
+            return [self._map_meta_column(field) for field in schema_metadata]
         except (RuntimeError, PySparkException) as e:
             return self.log_and_throw_exception(e, "schema", schema_query)
 
@@ -108,8 +110,8 @@ class OracleDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
     def reader(self, query: str) -> DataFrameReader:
         return self._get_jdbc_reader(query, self.get_jdbc_url, OracleDataSource._DRIVER)
 
-    def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._ansi_normalize_identifier(
+    def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
+        return DataSourceUtils.normalize_identifier(
             identifier,
             source_start_delimiter=OracleDataSource._IDENTIFIER_DELIMITER,
             source_end_delimiter=OracleDataSource._IDENTIFIER_DELIMITER,
