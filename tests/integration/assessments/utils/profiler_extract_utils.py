@@ -1,7 +1,16 @@
 from datetime import datetime
+from dataclasses import dataclass
+from collections.abc import Callable
 
 import duckdb
 from faker import Faker
+
+
+@dataclass(frozen=True)
+class MockTableDefinition:
+    schema: str
+    generator: Callable
+    num_rows: int
 
 
 class SynapseProfilerBuilder:
@@ -9,34 +18,34 @@ class SynapseProfilerBuilder:
     Simulates the extraction of usage/metrics data from the Azure Synapse profiler.
     """
 
-    def __init__(self, table_definitions: dict, db_path=":memory:"):
+    def __init__(self, tables_dict: dict, db_path=":memory:"):
         self.conn = duckdb.connect(database=db_path)
         self.fake = Faker()
-        self.table_definitions = table_definitions
+        self.tables_dict = tables_dict
         self._create_all_tables()
 
     def _create_all_tables(self) -> None:
-        for table_name, config in self.table_definitions.items():
-            schema = config["schema"]
+        for table_name, table_def in self.tables_dict.items():
+            schema = table_def.schema
             sql_stmnt = f"CREATE OR REPLACE TABLE {table_name} ({schema});"
             try:
                 self.conn.execute(sql_stmnt)
             except Exception as e:
                 print(f"Error creating table {table_name}: {e}")
                 print(sql_stmnt)
-                raise (e)
+                raise e
 
     def create_sample_data(self) -> None:
-        for table_name, config in self.table_definitions.items():
-            generator = config["generator"]
-            row_count = config["num_rows"]
+        for table_name, table_def in self.tables_dict.items():
+            generator = table_def.generator
+            row_count = table_def.num_rows
             for _ in range(row_count):
                 values = generator(self.fake)
                 placeholders = ", ".join(["?"] * len(values))
                 self.conn.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", values)
 
     def display_tables(self) -> None:
-        for table_name in self.table_definitions.keys():
+        for table_name in self.tables_dict.keys():
             print(f"\n--- {table_name.upper()} ---")
             print(self.conn.execute(f"SELECT * FROM {table_name}").df())
 
@@ -119,8 +128,8 @@ def generate_dedicated_storage_info(fake) -> tuple[int, int, datetime, int]:
 
 
 table_definitions = {
-    "dedicated_sql_pool_metrics": {
-        "schema": """
+    "dedicated_sql_pool_metrics": MockTableDefinition(
+        schema="""
             average DOUBLE,
             count BIGINT,
             maximum BIGINT,
@@ -130,21 +139,21 @@ table_definitions = {
             total DOUBLE,
             pool_name VARCHAR
         """,
-        "generator": generate_dedicated_sql_pool_metrics,
-        "num_rows": 1000,
-    },
-    "dedicated_storage_info": {
-        "schema": """
+        generator=generate_dedicated_sql_pool_metrics,
+        num_rows=1000,
+    ),
+    "dedicated_storage_info": MockTableDefinition(
+        schema="""
             ReservedSpaceMB BIGINT,
             UsedSpaceMB BIGINT,
             extract_ts VARCHAR,
             node_id BIGINT
         """,
-        "generator": generate_dedicated_storage_info,
-        "num_rows": 0,  # Create an empty table for testing
-    },
-    "workspace_sql_pools": {
-        "schema": """
+        generator=generate_dedicated_storage_info,
+        num_rows=0,  # Create an empty table for testing
+    ),
+    "workspace_sql_pools": MockTableDefinition(
+        schema="""
             creation_date VARCHAR,
             id VARCHAR,
             location VARCHAR,
@@ -157,9 +166,9 @@ table_definitions = {
             status VARCHAR,
             type VARCHAR
         """,
-        "generator": generate_sql_pools,
-        "num_rows": 1000,
-    },
+        generator=generate_sql_pools,
+        num_rows=1000,
+    ),
 }
 
 
