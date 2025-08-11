@@ -13,7 +13,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 from tests.conftest import schema_fixture_factory
 
 
-def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
+def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema, mock_data_source):
     spark = mock_spark
     sch, sch_with_alias = table_schema
     df_schema = StructType(
@@ -49,7 +49,7 @@ def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
         transformations=[Transformation(column_name="s_address", source="trim(s_address)", target="trim(s_address_t)")],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake")).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), mock_data_source).build_query(df)
 
     src_expected = (
         "WITH recon AS (SELECT CAST(11 AS number) AS s_nationkey, CAST(1 AS number) "
@@ -64,7 +64,9 @@ def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
         "src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     )
 
-    tgt_actual = SamplingQueryBuilder(conf, sch_with_alias, "target", get_dialect("databricks")).build_query(df)
+    tgt_actual = SamplingQueryBuilder(
+        conf, sch_with_alias, "target", get_dialect("databricks"), mock_data_source
+    ).build_query(df)
 
     tgt_expected = (
         'WITH recon AS (SELECT 11 AS s_nationkey, 1 AS s_suppkey UNION SELECT 22 AS '
@@ -82,7 +84,7 @@ def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema):
     assert tgt_expected == tgt_actual
 
 
-def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column_mapping):
+def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column_mapping, mock_data_source):
     spark = mock_spark
     _, sch_with_alias = table_schema
     df_schema = StructType(
@@ -121,7 +123,7 @@ def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column
         schema_fixture_factory("s_comment", "nchar"),
     ]
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("oracle")).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("oracle"), mock_data_source).build_query(df)
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS s_nationkey, CAST(1 AS number) '
         'AS s_suppkey FROM dual UNION SELECT CAST(22 AS number) AS s_nationkey, '
@@ -138,7 +140,9 @@ def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column
         "src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     )
 
-    tgt_actual = SamplingQueryBuilder(conf, sch_with_alias, "target", get_dialect("databricks")).build_query(df)
+    tgt_actual = SamplingQueryBuilder(
+        conf, sch_with_alias, "target", get_dialect("databricks"), mock_data_source
+    ).build_query(df)
     tgt_expected = (
         'WITH recon AS (SELECT 11 AS s_nationkey, 1 AS s_suppkey UNION SELECT 22 AS '
         's_nationkey, 2 AS s_suppkey UNION SELECT 33 AS s_nationkey, 3 AS s_suppkey), '
@@ -156,7 +160,7 @@ def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema, column
     assert tgt_expected == tgt_actual
 
 
-def test_build_query_for_databricks_src(mock_spark, table_conf):
+def test_build_query_for_databricks_src(mock_spark, table_conf, mock_data_source):
     spark = mock_spark
     df_schema = StructType(
         [
@@ -183,7 +187,9 @@ def test_build_query_for_databricks_src(mock_spark, table_conf):
 
     conf = table_conf(join_columns=["s_suppkey", "s_nationkey"])
 
-    src_actual = SamplingQueryBuilder(conf, schema, "source", get_dialect("databricks")).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, schema, "source", get_dialect("databricks"), mock_data_source).build_query(
+        df
+    )
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS bigint) AS s_nationkey, CAST(1 AS bigint) AS s_suppkey), src AS (SELECT '
         "COALESCE(TRIM(s_acctbal), '_null_recon_') AS s_acctbal, COALESCE(TRIM(s_address), '_null_recon_') AS "
@@ -197,7 +203,7 @@ def test_build_query_for_databricks_src(mock_spark, table_conf):
     assert src_expected == src_actual
 
 
-def test_build_query_for_snowflake_without_transformations(mock_spark, table_conf, table_schema):
+def test_build_query_for_snowflake_without_transformations(mock_spark, table_conf, table_schema, mock_data_source):
     spark = mock_spark
     sch, sch_with_alias = table_schema
     df_schema = StructType(
@@ -237,7 +243,7 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
         ],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake")).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), mock_data_source).build_query(df)
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS s_nationkey, 1 AS s_suppkey '
         'UNION SELECT CAST(22 AS number) AS s_nationkey, 2 AS s_suppkey), src '
@@ -251,7 +257,9 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
         "src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     )
 
-    tgt_actual = SamplingQueryBuilder(conf, sch_with_alias, "target", get_dialect("databricks")).build_query(df)
+    tgt_actual = SamplingQueryBuilder(
+        conf, sch_with_alias, "target", get_dialect("databricks"), mock_data_source
+    ).build_query(df)
     tgt_expected = (
         'WITH recon AS (SELECT 11 AS s_nationkey, 1 AS s_suppkey UNION SELECT 22 AS '
         "s_nationkey, 2 AS s_suppkey), src AS (SELECT COALESCE(TRIM(s_acctbal_t), '_null_recon_') "
@@ -268,7 +276,7 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
     assert tgt_expected == tgt_actual
 
 
-def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, table_conf):
+def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, table_conf, mock_data_source):
     spark = mock_spark
     sch = [
         schema_fixture_factory("s_suppkey", "varchar"),
@@ -305,7 +313,7 @@ def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, 
         transformations=[Transformation(column_name="s_address", source="trim(s_address)", target="trim(s_address_t)")],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake")).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), mock_data_source).build_query(df)
     src_expected = (
         "WITH recon AS (SELECT CAST(11 AS number) AS s_nationkey, CAST('a' AS "
         'varchar) AS s_suppkey UNION SELECT CAST(22 AS number) AS s_nationkey, '
@@ -317,7 +325,9 @@ def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, 
         "src.s_nationkey = recon.s_nationkey AND src.s_suppkey = recon.s_suppkey"
     )
 
-    tgt_actual = SamplingQueryBuilder(conf, sch_with_alias, "target", get_dialect("databricks")).build_query(df)
+    tgt_actual = SamplingQueryBuilder(
+        conf, sch_with_alias, "target", get_dialect("databricks"), mock_data_source
+    ).build_query(df)
     tgt_expected = (
         "WITH recon AS (SELECT 11 AS s_nationkey, 'a' AS s_suppkey UNION SELECT 22 AS "
         "s_nationkey, 'b' AS s_suppkey), src AS (SELECT COALESCE(TRIM(s_name), '_null_recon_') AS s_name, "

@@ -122,12 +122,12 @@ class Reconciliation:
         src_schema,
         tgt_schema,
     ):
-        src_hash_query = HashQueryBuilder(table_conf, src_schema, "source", self._source_engine).build_query(
-            report_type=self._report_type
-        )
-        tgt_hash_query = HashQueryBuilder(table_conf, tgt_schema, "target", self._source_engine).build_query(
-            report_type=self._report_type
-        )
+        src_hash_query = HashQueryBuilder(
+            table_conf, src_schema, "source", self._source_engine, self._source
+        ).build_query(report_type=self._report_type)
+        tgt_hash_query = HashQueryBuilder(
+            table_conf, tgt_schema, "target", self._source_engine, self._target
+        ).build_query(report_type=self._report_type)
         src_data = self._source.read_data(
             catalog=self._database_config.source_catalog,
             schema=self._database_config.source_schema,
@@ -216,6 +216,7 @@ class Reconciliation:
             src_schema,
             "source",
             self._source_engine,
+            self._source,
         )
 
         # build Aggregate queries for source,
@@ -229,6 +230,7 @@ class Reconciliation:
             tgt_schema,
             "target",
             self._target_engine,
+            self._target,
         ).build_queries()
 
         volume_path = utils.generate_volume_path(table_conf, self._metadata_config)
@@ -304,8 +306,8 @@ class Reconciliation:
             or reconcile_output.missing_in_src_count > 0
             or reconcile_output.missing_in_tgt_count > 0
         ):
-            src_sampler = SamplingQueryBuilder(table_conf, src_schema, "source", self._source_engine)
-            tgt_sampler = SamplingQueryBuilder(table_conf, tgt_schema, "target", self._target_engine)
+            src_sampler = SamplingQueryBuilder(table_conf, src_schema, "source", self._source_engine, self._source)
+            tgt_sampler = SamplingQueryBuilder(table_conf, tgt_schema, "target", self._target_engine, self._target)
             if reconcile_output.mismatch_count > 0:
                 mismatch = self._get_mismatch_data(
                     src_sampler,
@@ -417,10 +419,10 @@ class Reconciliation:
         tgt_schema: list[Schema],
     ) -> tuple[DataFrame, DataFrame]:
         src_threshold_query = ThresholdQueryBuilder(
-            table_conf, src_schema, "source", self._source_engine
+            table_conf, src_schema, "source", self._source_engine, self._source
         ).build_threshold_query()
         tgt_threshold_query = ThresholdQueryBuilder(
-            table_conf, tgt_schema, "target", self._target_engine
+            table_conf, tgt_schema, "target", self._target_engine, self._target
         ).build_threshold_query()
 
         src_data = self._source.read_data(
@@ -442,7 +444,7 @@ class Reconciliation:
 
     def _compute_threshold_comparison(self, table_conf: Table, src_schema: list[Schema]) -> ThresholdOutput:
         threshold_comparison_query = ThresholdQueryBuilder(
-            table_conf, src_schema, "target", self._target_engine
+            table_conf, src_schema, "target", self._target_engine, self._target
         ).build_comparison_query()
 
         threshold_result = self._target.read_data(

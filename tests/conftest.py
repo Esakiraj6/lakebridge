@@ -16,6 +16,7 @@ from pyspark.sql.types import (
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
 
+from databricks.labs.lakebridge.reconcile.connectors.data_source import MockDataSource
 from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.recon_config import (
     Table,
@@ -231,6 +232,11 @@ def schema_fixture_factory(
         normalized_source = normalized.source_normalized
 
     return Schema(normalized_ansi, data_type, normalized_ansi, normalized_source)  # Production uses ansi here
+
+
+@pytest.fixture
+def mock_data_source():
+    return MockDataSource({}, {})
 
 
 @pytest.fixture
