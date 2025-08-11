@@ -87,4 +87,4 @@ class DatabricksDataSource(DataSource, SecretsMixin):
             return self.log_and_throw_exception(e, "schema", schema_query)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._add_backticks_for(identifier, "`", "`")
+        return DataSource._ansi_normalize_identifier(identifier, "`", "`")

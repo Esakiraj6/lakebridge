@@ -132,4 +132,4 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         return self._get_jdbc_reader(query, self.get_jdbc_url, self._DRIVER, prepare_query_str)
 
     def normalize_identifier(self, identifier: str) -> str:
-        return DataSource._add_backticks_for(identifier, "[", "]")
+        return DataSource._ansi_normalize_identifier(identifier, "[", "]")

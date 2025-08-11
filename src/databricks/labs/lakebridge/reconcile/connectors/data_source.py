@@ -36,17 +36,28 @@ class DataSource(ABC):
         return NotImplemented
 
     @staticmethod
-    def _add_backticks_for(identifier: str, start_delimiter: str, end_delimiter: str) -> str:
+    def _ansi_normalize_identifier(identifier: str, source_start_delimiter: str, source_end_delimiter: str):
+        return DataSource._normalize_identifier(identifier, source_start_delimiter, source_end_delimiter, "`", "`")
+
+    @staticmethod
+    def _normalize_identifier(
+        identifier: str,
+        source_start_delimiter: str,
+        source_end_delimiter: str,
+        expected_source_start_delimiter: str,
+        expected_source_end_delimiter: str,
+    ) -> str:
         if identifier == "" or identifier is None:
             return ""
 
-        if DataSource._is_already_delimited(identifier, start_delimiter, end_delimiter):
-            stripped_identifier = identifier.removeprefix(start_delimiter).removesuffix(end_delimiter)
-        elif DataSource._is_already_delimited(identifier, "`", "`"):
-            stripped_identifier = identifier[1:][:-1]
+        if DataSource._is_already_delimited(identifier, expected_source_start_delimiter, expected_source_end_delimiter):
+            return identifier
+
+        if DataSource._is_already_delimited(identifier, source_start_delimiter, source_end_delimiter):
+            stripped_identifier = identifier.removeprefix(source_start_delimiter).removesuffix(source_end_delimiter)
         else:
             stripped_identifier = identifier
-        return f"`{stripped_identifier}`"
+        return f"{expected_source_start_delimiter}{stripped_identifier}{expected_source_end_delimiter}"
 
     @staticmethod
     def _is_already_delimited(identifier: str, start_delimiter: str, end_delimiter: str) -> bool:

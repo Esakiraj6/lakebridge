@@ -317,5 +317,5 @@ def test_normalize_identifier():
     data_source = SnowflakeDataSource(engine, spark, ws, scope)
 
     assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("\"\"col1\"\"") == "`col1`"  # Snowflake delimiter
+    assert data_source.normalize_identifier("\"col1\"") == "`col1`"  # Snowflake delimiter
     assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter
