@@ -210,8 +210,15 @@ def report_tables_schema():
     return recon_schema, metrics_schema, details_schema
 
 
-def schema_fixture_factory(column_name: str, data_type: str) -> Schema:
-    return Schema(column_name, data_type)
+def schema_fixture_factory(
+    column_name: str, data_type: str, normalized_ansi: str | None = None, normalized_source: str | None = None
+) -> Schema:
+    return Schema(
+        column_name,
+        data_type,
+        normalized_ansi if normalized_ansi else column_name,
+        normalized_source if normalized_source else column_name,
+    )
 
 
 @pytest.fixture

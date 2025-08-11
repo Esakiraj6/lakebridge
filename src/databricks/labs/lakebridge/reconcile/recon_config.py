@@ -288,7 +288,8 @@ class Table:
 
 @dataclass
 class Schema:
-    column_name: str # This will have the value of ansi_normalized_column_name. TODO remove this property
+    # This will have the value of ansi_normalized_column_name. Kept for backwards compatibility. TODO remove
+    column_name: str
     data_type: str
     ansi_normalized_column_name: str
     source_normalized_column_name: str
