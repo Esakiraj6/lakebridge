@@ -115,9 +115,10 @@ def test_get_schema_exception_handling():
         "table_name) ='employee' order by col_name : Test Exception"
     )
 
+
 def test_normalize_identifier():
     engine, spark, ws, scope = initial_setup()
     data_source = DatabricksDataSource(engine, spark, ws, scope)
 
     assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("`col1`") == "`col1`" # ANSI SQL delimiter
+    assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter

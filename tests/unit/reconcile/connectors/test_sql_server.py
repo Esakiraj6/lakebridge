@@ -177,10 +177,11 @@ def test_get_schema_exception_handling():
     ):
         data_source.get_schema("org", "schema", "supplier")
 
+
 def test_normalize_identifier():
     engine, spark, ws, scope = initial_setup()
     data_source = TSQLServerDataSource(engine, spark, ws, scope)
 
     assert data_source.normalize_identifier("col1") == "`col1`"
-    assert data_source.normalize_identifier("[col1]") == "`col1`" # T-SQL delimiter
-    assert data_source.normalize_identifier("`col1`") == "`col1`" # ANSI SQL delimiter
+    assert data_source.normalize_identifier("[col1]") == "`col1`"  # T-SQL delimiter
+    assert data_source.normalize_identifier("`col1`") == "`col1`"  # ANSI SQL delimiter

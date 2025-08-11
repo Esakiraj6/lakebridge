@@ -8,6 +8,7 @@ from databricks.labs.lakebridge.reconcile.recon_config import JdbcReaderOptions,
 
 logger = logging.getLogger(__name__)
 
+
 class DataSource(ABC):
 
     @abstractmethod
