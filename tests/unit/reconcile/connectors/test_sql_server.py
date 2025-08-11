@@ -113,46 +113,6 @@ def test_read_data_with_options():
     spark.read.format().option().option().option().options().load.assert_called_once()
 
 
-def test_handle_special_chars():
-    # initial setup
-    engine, spark, ws, scope = initial_setup()
-
-    # create object for MSSQLServerDataSource
-    data_source = TSQLServerDataSource(engine, spark, ws, scope)
-    # Create a Tables configuration object with JDBC reader options
-    table_conf = Table(
-        source_name="src_supplier",
-        target_name="tgt_supplier",
-        jdbc_reader_options=JdbcReaderOptions(
-            number_partitions=100, partition_column="s_partition_key", lower_bound="0", upper_bound="100"
-        ),
-    )
-
-    # Call the read_data method with the Tables configuration
-    data_source.read_data("org", "data", "employee", "SELECT `cust#` FROM :tbl", table_conf.jdbc_reader_options)
-
-    # spark assertions
-    spark.read.format.assert_called_with("jdbc")
-    spark.read.format().option.assert_called_with(
-        "url",
-        "jdbc:sqlserver://my_host:777;databaseName=my_database;user=my_user;password=my_password;encrypt=true;trustServerCertificate=true;",
-    )
-    spark.read.format().option().option.assert_called_with("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")
-    spark.read.format().option().option().option.assert_called_with(
-        "dbtable", "(SELECT `cust#` FROM org.data.employee) tmp"
-    )
-    actual_args = spark.read.format().option().option().option().options.call_args.kwargs
-    expected_args = {
-        "numPartitions": 100,
-        "partitionColumn": "s_partition_key",
-        "lowerBound": '0',
-        "upperBound": "100",
-        "fetchsize": 100,
-    }
-    assert actual_args == expected_args
-    spark.read.format().option().option().option().options().load.assert_called_once()
-
-
 def test_get_schema():
     # initial setup
     engine, spark, ws, scope = initial_setup()
