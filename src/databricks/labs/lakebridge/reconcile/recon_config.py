@@ -290,6 +290,8 @@ class Table:
 class Schema:
     column_name: str
     data_type: str
+    ansi_normalized_column_name: str
+    source_normalized_column_name: str
 
 
 @dataclass
