@@ -156,6 +156,7 @@ def query_store(mock_spark):
         sampling_queries=sampling_queries,
     )
 
+
 @pytest.fixture
 def query_store_normalized(mock_spark):
     source_hash_query = "SELECT LOWER(SHA2(CONCAT(TRIM(`s$address`), TRIM(`s$name`), COALESCE(TRIM(`s$nationkey`), '_null_recon_'), TRIM(`s$phone`), COALESCE(TRIM(`s$suppkey`), '_null_recon_')), 256)) AS hash_value_recon, `s$nationkey` AS `s$nationkey`, `s$suppkey` AS `s$suppkey` FROM :tbl WHERE `s$name` = 't' AND `s$address` = 'a'"
@@ -2140,19 +2141,19 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
             query_store_normalized.hash_queries.source_hash_query,
         ): mock_spark.createDataFrame(
             [
-                repo_model("a1b",11,1),
-                repo_model("c2d",22,2),
-                repo_model("e3g",33,3),
+                repo_model("a1b", 11, 1),
+                repo_model("c2d", 22, 2),
+                repo_model("e3g", 33, 3),
             ]
         ),
         (CATALOG, SCHEMA, query_store_normalized.mismatch_queries.source_mismatch_query): mock_spark.createDataFrame(
-            [query_model("address-2","name-2",22,"222-2",2)]
+            [query_model("address-2", "name-2", 22, "222-2", 2)]
         ),
         (CATALOG, SCHEMA, query_store_normalized.missing_queries.target_missing_query): mock_spark.createDataFrame(
-            [query_model("address-3","name-3",33,"333",3)]
+            [query_model("address-3", "name-3", 33, "333", 3)]
         ),
         (CATALOG, SCHEMA, query_store_normalized.threshold_queries.source_threshold_query): mock_spark.createDataFrame(
-            [threshold_query_model(11,1,100)]
+            [threshold_query_model(11, 1, 100)]
         ),
     }
     source_schema_repository = {(CATALOG, SCHEMA, SRC_TABLE): src_schema}
@@ -2163,9 +2164,9 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
             query_store_normalized.hash_queries.target_hash_query,
         ): mock_spark.createDataFrame(
             [
-                repo_model("a1b",11,1),
-                repo_model("c2de",22,2),
-                repo_model("k4l",44,4),
+                repo_model("a1b", 11, 1),
+                repo_model("c2de", 22, 2),
+                repo_model("k4l", 44, 4),
             ]
         ),
         (
@@ -2174,21 +2175,25 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
             query_store_normalized.sampling_queries.target_sampling_query,
         ): mock_spark.createDataFrame(
             [
-                repo_model("a1b",11,1),
-                repo_model("c2de",22,2),
-                repo_model("k4l",44,4),
+                repo_model("a1b", 11, 1),
+                repo_model("c2de", 22, 2),
+                repo_model("k4l", 44, 4),
             ]
         ),
         (CATALOG, SCHEMA, query_store_normalized.mismatch_queries.target_mismatch_query): mock_spark.createDataFrame(
-            [query_model("address-22","name-2",22,"222",2)]
+            [query_model("address-22", "name-2", 22, "222", 2)]
         ),
         (CATALOG, SCHEMA, query_store_normalized.missing_queries.source_missing_query): mock_spark.createDataFrame(
-            [query_model("address-4","name-4",44,"444",4)]
+            [query_model("address-4", "name-4", 44, "444", 4)]
         ),
         (CATALOG, SCHEMA, query_store_normalized.threshold_queries.target_threshold_query): mock_spark.createDataFrame(
-            [threshold_query_model(11,1,210)]
+            [threshold_query_model(11, 1, 210)]
         ),
-        (CATALOG, SCHEMA, query_store_normalized.threshold_queries.threshold_comparison_query): mock_spark.createDataFrame(
+        (
+            CATALOG,
+            SCHEMA,
+            query_store_normalized.threshold_queries.threshold_comparison_query,
+        ): mock_spark.createDataFrame(
             [
                 compare_query_model(
                     100,
@@ -2225,12 +2230,8 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
         mismatch_count=1,
         missing_in_src_count=1,
         missing_in_tgt_count=1,
-        missing_in_src=mock_spark.createDataFrame(
-            [query_model("address-4","name-4",44,"444",4)]
-        ),
-        missing_in_tgt=mock_spark.createDataFrame(
-            [query_model("address-3","name-3",33,"333",3)]
-        ),
+        missing_in_src=mock_spark.createDataFrame([query_model("address-4", "name-4", 44, "444", 4)]),
+        missing_in_tgt=mock_spark.createDataFrame([query_model("address-3", "name-3", 33, "333", 3)]),
         mismatch=MismatchOutput(
             mismatch_df=mock_spark.createDataFrame(
                 [
@@ -2293,50 +2294,50 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
     expected_schema_reconcile = mock_spark.createDataFrame(
         [
             Row(
-                source_column_normalized="s$suppkey",
-                source_column_normalized_ansi="s$suppkey",
+                source_column_normalized="`s$suppkey`",
+                source_column_normalized_ansi="`s$suppkey`",
                 source_datatype="number",
-                databricks_column="s$suppkey_t",
+                databricks_column="`s$suppkey_t`",
                 databricks_datatype="number",
                 is_valid=True,
             ),
             Row(
-                source_column_normalized="s$name",
-                source_column_normalized_ansi="s$name",
+                source_column_normalized="`s$name`",
+                source_column_normalized_ansi="`s$name`",
                 source_datatype="varchar",
-                databricks_column="s$name",
+                databricks_column="`s$name`",
                 databricks_datatype="varchar",
                 is_valid=True,
             ),
             Row(
-                source_column_normalized="s$address",
-                source_column_normalized_ansi="s$address",
+                source_column_normalized="`s$address`",
+                source_column_normalized_ansi="`s$address`",
                 source_datatype="varchar",
-                databricks_column="s$address_t",
+                databricks_column="`s$address_t`",
                 databricks_datatype="varchar",
                 is_valid=True,
             ),
             Row(
-                source_column_normalized="s$nationkey",
-                source_column_normalized_ansi="s$nationkey",
+                source_column_normalized="`s$nationkey`",
+                source_column_normalized_ansi="`s$nationkey`",
                 source_datatype="number",
-                databricks_column="s$nationkey_t",
+                databricks_column="`s$nationkey_t`",
                 databricks_datatype="number",
                 is_valid=True,
             ),
             Row(
-                source_column_normalized="s$phone",
-                source_column_normalized_ansi="s$phone",
+                source_column_normalized="`s$phone`",
+                source_column_normalized_ansi="`s$phone`",
                 source_datatype="varchar",
-                databricks_column="s$phone_t",
+                databricks_column="`s$phone_t`",
                 databricks_datatype="varchar",
                 is_valid=True,
             ),
             Row(
-                source_column_normalized="s$acctbal",
-                source_column_normalized_ansi="s$acctbal",
+                source_column_normalized="`s$acctbal`",
+                source_column_normalized_ansi="`s$acctbal`",
                 source_datatype="number",
-                databricks_column="s$acctbal_t",
+                databricks_column="`s$acctbal_t`",
                 databricks_datatype="number",
                 is_valid=True,
             ),
@@ -2360,14 +2361,3 @@ def test_reconcile_data_with_mismatches_and_missing_special_chars(
         ),
     )
     assert actual_data_reconcile.threshold_output.threshold_mismatch_count == 1
-
-def test_sqlglot():
-    import sqlglot.expressions as exp
-
-    (exp
-       .select("col$1", "col2")
-       .from_(":tbl")
-       .where("`col$1` > 100", dialect=get_dialect("databricks"))
-       .sql(dialect=get_dialect("databricks")))
-
-    assert True
