@@ -5,10 +5,11 @@ import sqlglot.expressions as exp
 from sqlglot import Dialect, parse_one
 
 from databricks.labs.lakebridge.reconcile.connectors.data_source import DataSource
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.exception import InvalidInputException
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
     DataType_transform_mapping,
-    transform_expression,
+    transform_expression, build_column,
 )
 from databricks.labs.lakebridge.reconcile.recon_config import Schema, Table, Aggregate
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect, SQLGLOT_DIALECTS
@@ -90,7 +91,7 @@ class QueryBuilder(ABC):
     def _user_transformer(self, node: exp.Expression, user_transformations: dict[str, str]) -> exp.Expression:
         if isinstance(node, exp.Column) and user_transformations:
             dialect = self.engine if self.layer == "source" else get_dialect("databricks")
-            column_name = node.name
+            column_name = self._data_source.normalize_identifier(node.name).ansi_normalized
             if column_name in user_transformations.keys():
                 return parse_one(user_transformations.get(column_name, column_name), read=dialect)
         return node
@@ -132,3 +133,13 @@ class QueryBuilder(ABC):
             message = f"Exception for {self.table_conf.target_name} target table in {self.layer} layer --> {message}"
             logger.error(message)
             raise InvalidInputException(message)
+
+    def _build_column_with_alias(self, column: str):
+        return build_column(
+            this=self._data_source.normalize_identifier(column).source_normalized,
+            alias=DialectUtils.unnormalize_identifier(
+                self.table_conf.get_layer_tgt_to_src_col_mapping(column, self.layer)
+            ),
+            quoted=True,
+        )
+

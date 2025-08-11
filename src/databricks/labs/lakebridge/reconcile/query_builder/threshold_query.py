@@ -228,18 +228,14 @@ class ThresholdQueryBuilder(QueryBuilder):
         join_columns = self.join_columns if self.join_columns else set()
         keys: list[str] = sorted(self.partition_column.union(join_columns))
         keys_select_alias = [
-            build_column(this=col,
-                         alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
-                         quoted=True)
+            self._build_column_with_alias(col)
             for col in keys
         ]
         keys_expr = self._apply_user_transformation(keys_select_alias)
 
         # threshold column expression
         threshold_alias = [
-            build_column(this=col,
-                         alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
-                         quoted=True)
+            self._build_column_with_alias(col)
             for col in sorted(self.threshold_columns)
         ]
         thresholds_expr = threshold_alias
@@ -248,7 +244,7 @@ class ThresholdQueryBuilder(QueryBuilder):
 
         query = ((select(*keys_expr + thresholds_expr)
                  .from_(":tbl")
-                 .where(self.filter, dialect=get_dialect("databricks")))
+                 .where(self.filter, dialect=self.engine))
                  .sql(dialect=self.engine))
         logger.info(f"Threshold Query for {self.layer}: {query}")
         return query
