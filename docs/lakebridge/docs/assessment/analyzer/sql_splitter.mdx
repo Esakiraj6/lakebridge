@@ -10,7 +10,10 @@ The SQL Splitter is a utility designed to process large SQL files containing mul
 
 Using the SQL Splitter utility is recommended as a best practice before running conversion processes. By organizing each database object into its own file, the splitter ensures a cleaner, more structured input, allowing conversion tools to work more efficiently and with greater accuracy. This approach streamlines processing and helps maintain clarity when handling large or complex SQL files.
 
+It is also recommended to run the SQL Splitter **before** executing the analyzer tool. While the analyzer is not a mandatory step, it is advised for deeper insights. Running the splitter first allows the analyzer to operate on each object at a granular level, producing more accurate and detailed analysis results for individual procedures, functions, tables, views, and other objects.
+
 This tool is particularly useful in situations where your SQL code is stored (or has been exported) in monolithic files that mix different object types (e.g., stored procedures, functions, tables, views, sequences, or Oracle packages).
+
 
 ---
 
