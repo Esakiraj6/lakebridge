@@ -70,3 +70,10 @@ def table_schema_oracle_ansi(table_schema):
     src_schema = [oracle_schema_fixture_factory(s.column_name, s.data_type) for s in src_schema]
     tgt_schema = [ansi_schema_fixture_factory(s.column_name, s.data_type) for s in tgt_schema]
     return src_schema, tgt_schema
+
+@pytest.fixture
+def table_schema_ansi_ansi(table_schema):
+    src_schema, tgt_schema = table_schema
+    src_schema = [ansi_schema_fixture_factory(s.column_name, s.data_type) for s in src_schema]
+    tgt_schema = [ansi_schema_fixture_factory(s.column_name, s.data_type) for s in tgt_schema]
+    return src_schema, tgt_schema
