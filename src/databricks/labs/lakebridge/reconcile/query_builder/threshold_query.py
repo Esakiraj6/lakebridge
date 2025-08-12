@@ -18,7 +18,6 @@ from databricks.labs.lakebridge.reconcile.query_builder.expression_generator imp
     coalesce,
 )
 from databricks.labs.lakebridge.reconcile.recon_config import ColumnThresholds
-from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.transpiler.sqlglot.generator.databricks import Databricks
 
 logger = logging.getLogger(__name__)
@@ -65,10 +64,14 @@ class ThresholdQueryBuilder(QueryBuilder):
             where_clause.append(where)
         # join columns
         for column in sorted(join_columns):
-            select_clause.append(build_column(this=column,
-                                              alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
-                                              table_name="source",
-                                              quoted=True))
+            select_clause.append(
+                build_column(
+                    this=column,
+                    alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
+                    table_name="source",
+                    quoted=True,
+                )
+            )
         where = build_where_clause(where_clause)
 
         return select_clause, where
@@ -82,17 +85,19 @@ class ThresholdQueryBuilder(QueryBuilder):
         select_clause = []
         column = threshold.column_name
         select_clause.append(
-            build_column(this=column,
-                         alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
-                         table_name="source",
-                         quoted=True
+            build_column(
+                this=column,
+                alias=f"{DialectUtils.unnormalize_identifier(column)}_source",
+                table_name="source",
+                quoted=True,
             ).transform(coalesce)
         )
         select_clause.append(
-            build_column(this=column,
-                         alias=f"{DialectUtils.unnormalize_identifier(column)}_databricks",
-                         table_name="databricks",
-                         quoted=True
+            build_column(
+                this=column,
+                alias=f"{DialectUtils.unnormalize_identifier(column)}_databricks",
+                table_name="databricks",
+                quoted=True,
             ).transform(coalesce)
         )
         where_clause = exp.NEQ(this=base, expression=exp.Literal(this="0", is_string=False))
@@ -124,9 +129,13 @@ class ThresholdQueryBuilder(QueryBuilder):
             logger.error(error_message)
             raise ValueError(error_message)
 
-        select_clause.append(build_column(this=func(base=base, threshold=threshold),
-                                          alias=f"{DialectUtils.unnormalize_identifier(column)}_match",
-                                          quoted=True))
+        select_clause.append(
+            build_column(
+                this=func(base=base, threshold=threshold),
+                alias=f"{DialectUtils.unnormalize_identifier(column)}_match",
+                quoted=True,
+            )
+        )
 
         return select_clause, where_clause
 
@@ -227,24 +236,17 @@ class ThresholdQueryBuilder(QueryBuilder):
         self._validate(self.join_columns, "Join Columns are compulsory for threshold query")
         join_columns = self.join_columns if self.join_columns else set()
         keys: list[str] = sorted(self.partition_column.union(join_columns))
-        keys_select_alias = [
-            self._build_column_with_alias(col)
-            for col in keys
-        ]
+        keys_select_alias = [self._build_column_with_alias(col) for col in keys]
         keys_expr = self._apply_user_transformation(keys_select_alias)
 
         # threshold column expression
-        threshold_alias = [
-            self._build_column_with_alias(col)
-            for col in sorted(self.threshold_columns)
-        ]
+        threshold_alias = [self._build_column_with_alias(col) for col in sorted(self.threshold_columns)]
         thresholds_expr = threshold_alias
         if self.user_transformations:
             thresholds_expr = self._apply_user_transformation(threshold_alias)
 
-        query = ((select(*keys_expr + thresholds_expr)
-                 .from_(":tbl")
-                 .where(self.filter, dialect=self.engine))
-                 .sql(dialect=self.engine))
+        query = (select(*keys_expr + thresholds_expr).from_(":tbl").where(self.filter, dialect=self.engine)).sql(
+            dialect=self.engine
+        )
         logger.info(f"Threshold Query for {self.layer}: {query}")
         return query

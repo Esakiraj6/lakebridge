@@ -43,7 +43,13 @@ class HashQueryBuilder(QueryBuilder):
         key_cols = hash_cols if report_type == "row" else sorted(_join_columns | self.partition_column)
 
         cols_with_alias = [
-            build_column(this=col, alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)), quoted=True)
+            build_column(
+                this=col,
+                alias=DialectUtils.unnormalize_identifier(
+                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
+                ),
+                quoted=True,
+            )
             for col in key_cols
         ]
 

@@ -9,7 +9,8 @@ from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import Dialec
 from databricks.labs.lakebridge.reconcile.exception import InvalidInputException
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
     DataType_transform_mapping,
-    transform_expression, build_column,
+    transform_expression,
+    build_column,
 )
 from databricks.labs.lakebridge.reconcile.recon_config import Schema, Table, Aggregate
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect, SQLGLOT_DIALECTS
@@ -142,4 +143,3 @@ class QueryBuilder(ABC):
             ),
             quoted=True,
         )
-

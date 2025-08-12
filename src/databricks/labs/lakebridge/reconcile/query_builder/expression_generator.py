@@ -124,6 +124,7 @@ def anonymous(expr: exp.Column, func: str, is_expr: bool = False, dialect=None) 
             node.replace(anonymous_func)
     return new_expr
 
+
 # TODO Standardize impl and use quoted and Identifier/Column consistently
 def build_column(this: exp.ExpOrStr, table_name="", quoted=False, alias=None) -> exp.Expression:
     if alias:

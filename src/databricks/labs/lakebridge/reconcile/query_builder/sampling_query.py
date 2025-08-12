@@ -39,17 +39,22 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(this=DialectUtils.ansi_normalize_identifier(col),
-                         alias=DialectUtils.unnormalize_identifier(
-                             self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
-                         quoted=True)
+            build_column(
+                this=DialectUtils.ansi_normalize_identifier(col),
+                alias=DialectUtils.unnormalize_identifier(
+                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
+                ),
+                quoted=True,
+            )
             for col in cols
         ]
 
-        query = (select(*cols_with_alias, dialect=get_dialect("databricks"))
-                 .from_(":tbl")
-                 .where(self.filter, dialect=get_dialect("databricks"))
-                 .sql(dialect=self.engine))
+        query = (
+            select(*cols_with_alias, dialect=get_dialect("databricks"))
+            .from_(":tbl")
+            .where(self.filter, dialect=get_dialect("databricks"))
+            .sql(dialect=self.engine)
+        )
 
         logger.info(f"Sampling Query with Alias for {self.layer}: {query}")
         return query
@@ -67,16 +72,23 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(this=col,
-                         alias=DialectUtils.unnormalize_identifier(self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)),
-                         quoted=True)
+            build_column(
+                this=col,
+                alias=DialectUtils.unnormalize_identifier(
+                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
+                ),
+                quoted=True,
+            )
             for col in cols
         ]
 
         sql_with_transforms = self.add_transformations(cols_with_alias, self.engine)
         query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter, dialect=get_dialect("databricks"))
         if self.layer == "source":
-            with_select = [build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True) for col in sorted(cols)]
+            with_select = [
+                build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)
+                for col in sorted(cols)
+            ]
         else:
             with_select = [
                 build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)

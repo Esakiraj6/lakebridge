@@ -456,7 +456,9 @@ class Reconciliation:
             options=table_conf.jdbc_reader_options,
         )
         threshold_columns = table_conf.get_threshold_columns("source")
-        failed_where_cond = " OR ".join(["`"+DialectUtils.unnormalize_identifier(name) + "_match` = 'Failed'" for name in threshold_columns])
+        failed_where_cond = " OR ".join(
+            ["`" + DialectUtils.unnormalize_identifier(name) + "_match` = 'Failed'" for name in threshold_columns]
+        )
         mismatched_df = threshold_result.filter(failed_where_cond)
         mismatched_count = mismatched_df.count()
         threshold_df = None
