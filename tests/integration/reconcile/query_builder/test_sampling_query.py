@@ -10,10 +10,12 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
     Transformation,
 )
 
-from tests.conftest import schema_fixture_factory, oracle_schema_fixture_factory, ansi_schema_fixture_factory
+from tests.conftest import oracle_schema_fixture_factory, ansi_schema_fixture_factory
 
 
-def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema_oracle_ansi, fake_oracle_datasource, fake_databricks_datasource):
+def test_build_query_for_snowflake_src(
+    mock_spark, table_conf, table_schema_oracle_ansi, fake_oracle_datasource, fake_databricks_datasource
+):
     spark = mock_spark
     sch, sch_with_alias = table_schema_oracle_ansi
     df_schema = StructType(
@@ -46,10 +48,14 @@ def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema_orac
             ColumnMapping(source_name="`s_comment`", target_name="`s_comment_t`"),
         ],
         filters=Filters(source="s_nationkey=1"),
-        transformations=[Transformation(column_name="`s_address`", source="trim(s_address)", target="trim(s_address_t)")],
+        transformations=[
+            Transformation(column_name="`s_address`", source="trim(s_address)", target="trim(s_address_t)")
+        ],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource).build_query(df)
+    src_actual = SamplingQueryBuilder(
+        conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource
+    ).build_query(df)
 
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS "s_nationkey", CAST(1 AS number) '
@@ -90,7 +96,14 @@ def test_build_query_for_snowflake_src(mock_spark, table_conf, table_schema_orac
     assert tgt_actual == tgt_expected
 
 
-def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema_oracle_ansi, normalized_column_mapping, fake_oracle_datasource, fake_databricks_datasource):
+def test_build_query_for_oracle_src(
+    mock_spark,
+    table_conf,
+    table_schema_oracle_ansi,
+    normalized_column_mapping,
+    fake_oracle_datasource,
+    fake_databricks_datasource,
+):
     spark = mock_spark
     _, sch_with_alias = table_schema_oracle_ansi
     df_schema = StructType(
@@ -129,7 +142,9 @@ def test_build_query_for_oracle_src(mock_spark, table_conf, table_schema_oracle_
         oracle_schema_fixture_factory("s_comment", "nchar"),
     ]
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("oracle"), fake_oracle_datasource).build_query(df)
+    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("oracle"), fake_oracle_datasource).build_query(
+        df
+    )
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS "s_nationkey", CAST(1 AS number) '
         'AS "s_suppkey" FROM dual UNION SELECT CAST(22 AS number) AS "s_nationkey", '
@@ -198,9 +213,9 @@ def test_build_query_for_databricks_src(mock_spark, table_conf, fake_databricks_
 
     conf = table_conf(join_columns=["`s_suppkey`", "`s_nationkey`"])
 
-    src_actual = SamplingQueryBuilder(conf, schema, "source", get_dialect("databricks"), fake_databricks_datasource).build_query(
-        df
-    )
+    src_actual = SamplingQueryBuilder(
+        conf, schema, "source", get_dialect("databricks"), fake_databricks_datasource
+    ).build_query(df)
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS bigint) AS `s_nationkey`, CAST(1 AS bigint) '
         "AS `s_suppkey`), src AS (SELECT COALESCE(TRIM(`s_acctbal`), '_null_recon_') "
@@ -218,7 +233,9 @@ def test_build_query_for_databricks_src(mock_spark, table_conf, fake_databricks_
     assert src_actual == src_expected
 
 
-def test_build_query_for_snowflake_without_transformations(mock_spark, table_conf, table_schema_oracle_ansi, fake_oracle_datasource, fake_databricks_datasource):
+def test_build_query_for_snowflake_without_transformations(
+    mock_spark, table_conf, table_schema_oracle_ansi, fake_oracle_datasource, fake_databricks_datasource
+):
     spark = mock_spark
     sch, sch_with_alias = table_schema_oracle_ansi
     df_schema = StructType(
@@ -258,7 +275,9 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
         ],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource).build_query(df)
+    src_actual = SamplingQueryBuilder(
+        conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource
+    ).build_query(df)
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS "s_nationkey", 1 AS "s_suppkey" '
         'UNION SELECT CAST(22 AS number) AS "s_nationkey", 2 AS "s_suppkey"), src AS '
@@ -294,7 +313,9 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
     assert tgt_actual == tgt_expected
 
 
-def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, table_conf, fake_oracle_datasource, fake_databricks_datasource):
+def test_build_query_for_snowflake_src_for_non_integer_primary_keys(
+    mock_spark, table_conf, fake_oracle_datasource, fake_databricks_datasource
+):
     spark = mock_spark
     sch = [
         oracle_schema_fixture_factory("s_suppkey", "varchar"),
@@ -328,10 +349,14 @@ def test_build_query_for_snowflake_src_for_non_integer_primary_keys(mock_spark, 
             ColumnMapping(source_name="`s_suppkey`", target_name="`s_suppkey_t`"),
             ColumnMapping(source_name="`s_nationkey`", target_name='`s_nationkey_t`'),
         ],
-        transformations=[Transformation(column_name="`s_address`", source="trim(s_address)", target="trim(s_address_t)")],
+        transformations=[
+            Transformation(column_name="`s_address`", source="trim(s_address)", target="trim(s_address_t)")
+        ],
     )
 
-    src_actual = SamplingQueryBuilder(conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource).build_query(df)
+    src_actual = SamplingQueryBuilder(
+        conf, sch, "source", get_dialect("snowflake"), fake_oracle_datasource
+    ).build_query(df)
     src_expected = (
         'WITH recon AS (SELECT CAST(11 AS number) AS "s_nationkey", CAST(\'a\' AS '
         'varchar) AS "s_suppkey" UNION SELECT CAST(22 AS number) AS "s_nationkey", '

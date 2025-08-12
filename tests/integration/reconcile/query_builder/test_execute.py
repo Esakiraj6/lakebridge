@@ -873,7 +873,9 @@ def test_recon_for_report_type_is_data(
 
 
 @pytest.fixture
-def mock_for_report_type_schema(normalized_table_conf_with_opts, table_schema_ansi_ansi, query_store, mock_spark, setup_metadata_table):
+def mock_for_report_type_schema(
+    normalized_table_conf_with_opts, table_schema_ansi_ansi, query_store, mock_spark, setup_metadata_table
+):
     table_recon = TableRecon(
         source_catalog="org",
         source_schema="data",
@@ -1071,7 +1073,7 @@ def mock_for_report_type_all(
     query_store,
     setup_metadata_table,
 ):
-    snowflake_query_store = query_store # TODO: Implement snowflake query store
+    snowflake_query_store = query_store  # TODO: Implement snowflake query store
     normalized_table_conf_with_opts.drop_columns = ["`s_acctbal`"]
     normalized_table_conf_with_opts.column_thresholds = None
     table_recon = TableRecon(
@@ -1100,9 +1102,11 @@ def mock_for_report_type_all(
         (CATALOG, SCHEMA, snowflake_query_store.missing_queries.target_missing_query): mock_spark.createDataFrame(
             [Row(s_address="address-3", s_name="name-3", s_nationkey=33, s_phone="333", s_suppkey=3)]
         ),
-        (CATALOG, SCHEMA, snowflake_query_store.record_count_queries.source_record_count_query): mock_spark.createDataFrame(
-            [Row(count=3)]
-        ),
+        (
+            CATALOG,
+            SCHEMA,
+            snowflake_query_store.record_count_queries.source_record_count_query,
+        ): mock_spark.createDataFrame([Row(count=3)]),
     }
     source_schema_repository = {(CATALOG, SCHEMA, SRC_TABLE): src_schema}
 
@@ -1135,13 +1139,15 @@ def mock_for_report_type_all(
         (CATALOG, SCHEMA, snowflake_query_store.missing_queries.source_missing_query): mock_spark.createDataFrame(
             [Row(s_address="address-4", s_name="name-4", s_nationkey=44, s_phone="444", s_suppkey=4)]
         ),
-        (CATALOG, SCHEMA, snowflake_query_store.record_count_queries.target_record_count_query): mock_spark.createDataFrame(
-            [Row(count=3)]
-        ),
+        (
+            CATALOG,
+            SCHEMA,
+            snowflake_query_store.record_count_queries.target_record_count_query,
+        ): mock_spark.createDataFrame([Row(count=3)]),
     }
 
     target_schema_repository = {(CATALOG, SCHEMA, TGT_TABLE): tgt_schema}
-    source = MockDataSource(source_dataframe_repository, source_schema_repository, source_delimiter='"')
+    source = MockDataSource(source_dataframe_repository, source_schema_repository)
     target = MockDataSource(target_dataframe_repository, target_schema_repository)
     reconcile_config_all = ReconcileConfig(
         data_source="snowflake",
@@ -1329,7 +1335,9 @@ def test_recon_for_report_type_all(
 
 
 @pytest.fixture
-def mock_for_report_type_row(normalized_table_conf_with_opts, table_schema_ansi_ansi, mock_spark, query_store, setup_metadata_table):
+def mock_for_report_type_row(
+    normalized_table_conf_with_opts, table_schema_ansi_ansi, mock_spark, query_store, setup_metadata_table
+):
     normalized_table_conf_with_opts.drop_columns = ["`s_acctbal`"]
     normalized_table_conf_with_opts.column_thresholds = None
     table_recon = TableRecon(
@@ -1434,6 +1442,7 @@ def mock_for_report_type_row(normalized_table_conf_with_opts, table_schema_ansi_
     )
 
     return source, target, table_recon, reconcile_config_row
+
 
 @pytest.mark.skip(reason="Will be fixed in a following PR")
 def test_recon_for_report_type_is_row(
