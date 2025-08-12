@@ -94,7 +94,9 @@ class QueryBuilder(ABC):
             normalized_column = self._data_source.normalize_identifier(node.name)
             ansi_name = normalized_column.ansi_normalized
             if ansi_name in user_transformations.keys():
-                return parse_one(user_transformations.get(ansi_name, normalized_column.source_normalized), read=self.engine)
+                return parse_one(
+                    user_transformations.get(ansi_name, normalized_column.source_normalized), read=self.engine
+                )
         return node
 
     def _apply_default_transformation(
@@ -148,6 +150,6 @@ class QueryBuilder(ABC):
         return self._data_source.normalize_identifier(column).source_normalized
 
     def _build_alias_source_normalized(self, column: str):
-        return  self._data_source.normalize_identifier(
+        return self._data_source.normalize_identifier(
             self.table_conf.get_layer_tgt_to_src_col_mapping(column, self.layer)
         ).source_normalized

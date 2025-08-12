@@ -135,6 +135,7 @@ def build_column(this: exp.ExpOrStr, table_name="", quoted=False, alias=None) ->
         return exp.Alias(this=this, alias=exp.Identifier(this=alias, quoted=quoted))
     return exp.Column(this=exp.Identifier(this=this, quoted=quoted), table=table_name)
 
+
 def build_column_no_alias(this: str, table_name="") -> exp.Expression:
     return exp.Column(this=this, table=table_name)
 

@@ -48,6 +48,7 @@ def column_mapping():
         ColumnMapping(source_name="s_comment", target_name="s_comment_t"),
     ]
 
+
 @pytest.fixture
 def normalized_column_mapping():
     return [

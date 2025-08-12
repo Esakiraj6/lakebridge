@@ -13,7 +13,6 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
 )
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from tests.conftest import oracle_schema_fixture_factory, ansi_schema_fixture_factory
-from unit.reconcile.query_builder.conftest import fake_oracle_datasource
 
 
 def test_threshold_comparison_query_with_one_threshold(
@@ -87,7 +86,9 @@ def test_build_threshold_query_with_single_threshold(
     table_conf = normalized_table_conf_with_opts
     table_conf.jdbc_reader_options = None
     table_conf.transformations = [
-        Transformation(column_name="`s_acctbal`", source="cast(\"s_acctbal\" as number)", target="cast(`s_acctbal_t` as int)")
+        Transformation(
+            column_name="`s_acctbal`", source="cast(\"s_acctbal\" as number)", target="cast(`s_acctbal_t` as int)"
+        )
     ]
     src_schema, tgt_schema = table_schema_oracle_ansi
     src_query = ThresholdQueryBuilder(
@@ -153,9 +154,7 @@ def test_build_expression_type_raises_value_error(
         ).build_comparison_query()
 
 
-def test_test_no_join_columns_raise_exception(
-    fake_oracle_datasource, table_conf_with_opts, table_schema_oracle_ansi
-):
+def test_test_no_join_columns_raise_exception(fake_oracle_datasource, table_conf_with_opts, table_schema_oracle_ansi):
     table_conf = table_conf_with_opts
     table_conf.join_columns = None
     src_schema, tgt_schema = table_schema_oracle_ansi
