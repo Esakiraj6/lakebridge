@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 from sqlglot import expressions as exp
 
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.constants import SamplingOptionMethod, SamplingSpecificationsType
 
 logger = logging.getLogger(__name__)
@@ -261,7 +262,7 @@ class Table:
         if self.transformations:
             if layer == "source":
                 return {
-                    trans.column_name: (trans.source if trans.source else trans.column_name)
+                    trans.column_name: (trans.source if trans.source else DialectUtils.unnormalize_identifier(trans.column_name))
                     for trans in self.transformations
                 }
             return {

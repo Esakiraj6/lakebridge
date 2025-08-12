@@ -39,20 +39,14 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(
-                this=DialectUtils.ansi_normalize_identifier(col),
-                alias=DialectUtils.unnormalize_identifier(
-                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
-                ),
-                quoted=True,
-            )
+            self._build_column_with_alias(col)
             for col in cols
         ]
 
         query = (
-            select(*cols_with_alias, dialect=get_dialect("databricks"))
+            select(*cols_with_alias)
             .from_(":tbl")
-            .where(self.filter, dialect=get_dialect("databricks"))
+            .where(self.filter, dialect=self.engine)
             .sql(dialect=self.engine)
         )
 
@@ -72,18 +66,12 @@ class SamplingQueryBuilder(QueryBuilder):
         cols = sorted((join_columns | self.select_columns) - self.threshold_columns - self.drop_columns)
 
         cols_with_alias = [
-            build_column(
-                this=col,
-                alias=DialectUtils.unnormalize_identifier(
-                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
-                ),
-                quoted=True,
-            )
+            self._build_column_with_alias(col)
             for col in cols
         ]
 
         sql_with_transforms = self.add_transformations(cols_with_alias, self.engine)
-        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter, dialect=get_dialect("databricks"))
+        query_sql = select(*sql_with_transforms).from_(":tbl").where(self.filter, dialect=self.engine)
         if self.layer == "source":
             with_select = [
                 build_column(this=DialectUtils.unnormalize_identifier(col), table_name="src", quoted=True)
@@ -95,7 +83,7 @@ class SamplingQueryBuilder(QueryBuilder):
                 for col in sorted(self.table_conf.get_tgt_to_src_col_mapping_list(cols))
             ]
 
-        join_clause = SamplingQueryBuilder._get_join_clause(key_cols)
+        join_clause = self._get_join_clause(key_cols)
 
         query = (
             with_clause.with_(alias="src", as_=query_sql)
@@ -107,10 +95,10 @@ class SamplingQueryBuilder(QueryBuilder):
         logger.info(f"Sampling Query for {self.layer}: {query}")
         return query
 
-    @classmethod
-    def _get_join_clause(cls, key_cols: list):
+    def _get_join_clause(self, key_cols: list):
+        normalized = [self._build_column_name_source_normalized(col) for col in key_cols]
         return build_join_clause(
-            "recon", key_cols, source_table_alias="src", target_table_alias="recon", kind="inner", func=exp.EQ
+            "recon", normalized, source_table_alias="src", target_table_alias="recon", kind="inner", func=exp.EQ
         )
 
     def _get_with_clause(self, df: DataFrame) -> exp.Select:
@@ -129,7 +117,7 @@ class SamplingQueryBuilder(QueryBuilder):
                         this=str(value),
                         alias=DialectUtils.unnormalize_identifier(col),
                         is_string=_get_is_string(column_types_dict, col),
-                        cast=orig_types_dict.get(col),
+                        cast=orig_types_dict.get(DialectUtils.ansi_normalize_identifier(col)),
                         quoted=True,
                     )
                     if value is not None
