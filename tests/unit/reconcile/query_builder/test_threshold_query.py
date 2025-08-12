@@ -12,19 +12,20 @@ from databricks.labs.lakebridge.reconcile.recon_config import (
     Transformation,
 )
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
-from tests.conftest import oracle_schema_fixture_factory, schema_fixture_factory
+from tests.conftest import oracle_schema_fixture_factory, ansi_schema_fixture_factory
+from unit.reconcile.query_builder.conftest import fake_oracle_datasource
 
 
 def test_threshold_comparison_query_with_one_threshold(
-    fake_oracle_datasource, normalized_table_conf_with_opts, table_schema, mock_data_source
+    fake_oracle_datasource, normalized_table_conf_with_opts, table_schema_oracle_ansi
 ):
     # table conf
     table_conf = normalized_table_conf_with_opts
     # schema
-    table_schema, _ = table_schema
-    table_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
+    src_schema, _ = table_schema_oracle_ansi
+    src_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
     comparison_query = ThresholdQueryBuilder(
-        table_conf, table_schema, "source", get_dialect("oracle"), fake_oracle_datasource
+        table_conf, src_schema, "source", get_dialect("oracle"), fake_oracle_datasource
     ).build_comparison_query()
     assert re.sub(r'\s+', ' ', comparison_query.strip().lower()) == re.sub(
         r'\s+',
@@ -42,7 +43,7 @@ def test_threshold_comparison_query_with_one_threshold(
 
 
 def test_threshold_comparison_query_with_dual_threshold(
-    fake_databricks_datasource, normalized_table_conf_with_opts, table_schema, mock_data_source
+    fake_databricks_datasource, normalized_table_conf_with_opts, table_schema_oracle_ansi
 ):
     # table conf
     table_conf = normalized_table_conf_with_opts
@@ -53,11 +54,11 @@ def test_threshold_comparison_query_with_dual_threshold(
     ]
 
     # schema
-    table_schema, _ = table_schema
-    table_schema.append(schema_fixture_factory("s_suppdate", "timestamp"))
+    src_schema, _ = table_schema_oracle_ansi
+    src_schema.append(ansi_schema_fixture_factory("s_suppdate", "timestamp"))
 
     comparison_query = ThresholdQueryBuilder(
-        table_conf, table_schema, "target", get_dialect("databricks"), fake_databricks_datasource
+        table_conf, src_schema, "target", get_dialect("databricks"), fake_databricks_datasource
     ).build_comparison_query()
     assert re.sub(r'\s+', ' ', comparison_query.strip().lower()) == re.sub(
         r'\s+',
@@ -81,14 +82,14 @@ def test_threshold_comparison_query_with_dual_threshold(
 
 
 def test_build_threshold_query_with_single_threshold(
-    fake_oracle_datasource, fake_databricks_datasource, normalized_table_conf_with_opts, table_schema, mock_data_source
+    fake_oracle_datasource, fake_databricks_datasource, normalized_table_conf_with_opts, table_schema_oracle_ansi
 ):
     table_conf = normalized_table_conf_with_opts
     table_conf.jdbc_reader_options = None
     table_conf.transformations = [
-        Transformation(column_name="s_acctbal", source="cast(s_acctbal as number)", target="cast(s_acctbal_t as int)")
+        Transformation(column_name="`s_acctbal`", source="cast(\"s_acctbal\" as number)", target="cast(`s_acctbal_t` as int)")
     ]
-    src_schema, tgt_schema = table_schema
+    src_schema, tgt_schema = table_schema_oracle_ansi
     src_query = ThresholdQueryBuilder(
         table_conf, src_schema, "source", get_dialect("oracle"), fake_oracle_datasource
     ).build_threshold_query()
@@ -97,16 +98,16 @@ def test_build_threshold_query_with_single_threshold(
     ).build_threshold_query()
     assert src_query == (
         "SELECT \"s_nationkey\" AS \"s_nationkey\", \"s_suppkey\" AS \"s_suppkey\", "
-        "\"s_acctbal\" AS \"s_acctbal\" FROM :tbl WHERE s_name = 't' AND s_address = 'a'"
+        "CAST(\"s_acctbal\" AS NUMBER) AS \"s_acctbal\" FROM :tbl WHERE s_name = 't' AND s_address = 'a'"
     )
     assert target_query == (
         "SELECT `s_nationkey_t` AS `s_nationkey`, `s_suppkey_t` AS `s_suppkey`, "
-        "`s_acctbal_t` AS `s_acctbal` FROM :tbl WHERE s_name = 't' AND s_address_t = 'a'"
+        "CAST(`s_acctbal_t` AS INT) AS `s_acctbal` FROM :tbl WHERE s_name = 't' AND s_address_t = 'a'"
     )
 
 
 def test_build_threshold_query_with_multiple_threshold(
-    fake_oracle_datasource, fake_databricks_datasource, normalized_table_conf_with_opts, table_schema, mock_data_source
+    fake_oracle_datasource, fake_databricks_datasource, normalized_table_conf_with_opts, table_schema_oracle_ansi
 ):
     table_conf = normalized_table_conf_with_opts
     table_conf.jdbc_reader_options = JdbcReaderOptions(
@@ -117,9 +118,9 @@ def test_build_threshold_query_with_multiple_threshold(
         ColumnThresholds(column_name="`s_suppdate`", lower_bound="-86400", upper_bound="86400", type="timestamp"),
     ]
     table_conf.filters = None
-    src_schema, tgt_schema = table_schema
-    src_schema.append(oracle_schema_fixture_factory("`s_suppdate`", "timestamp"))
-    tgt_schema.append(schema_fixture_factory("`s_suppdate`", "timestamp"))
+    src_schema, tgt_schema = table_schema_oracle_ansi
+    src_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
+    tgt_schema.append(ansi_schema_fixture_factory("s_suppdate", "timestamp"))
     src_query = ThresholdQueryBuilder(
         table_conf, src_schema, "source", get_dialect("oracle"), fake_oracle_datasource
     ).build_threshold_query()
@@ -137,16 +138,14 @@ def test_build_threshold_query_with_multiple_threshold(
 
 
 def test_build_expression_type_raises_value_error(
-    fake_oracle_datasource, table_conf_with_opts, table_schema, mock_data_source
+    fake_oracle_datasource, normalized_table_conf_with_opts, table_schema_oracle_ansi
 ):
-    table_conf = table_conf_with_opts
+    table_conf = normalized_table_conf_with_opts
     table_conf.column_thresholds = [
-        ColumnThresholds(column_name="s_acctbal", lower_bound="5%", upper_bound="-5%", type="unknown"),
+        ColumnThresholds(column_name="`s_acctbal`", lower_bound="5%", upper_bound="-5%", type="unknown"),
     ]
     table_conf.filters = None
-    src_schema, tgt_schema = table_schema
-    src_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
-    tgt_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
+    src_schema, _ = table_schema_oracle_ansi
 
     with pytest.raises(ValueError):
         ThresholdQueryBuilder(
@@ -155,11 +154,11 @@ def test_build_expression_type_raises_value_error(
 
 
 def test_test_no_join_columns_raise_exception(
-    fake_oracle_datasource, table_conf_with_opts, table_schema, mock_data_source
+    fake_oracle_datasource, table_conf_with_opts, table_schema_oracle_ansi
 ):
     table_conf = table_conf_with_opts
     table_conf.join_columns = None
-    src_schema, tgt_schema = table_schema
+    src_schema, tgt_schema = table_schema_oracle_ansi
     src_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
     tgt_schema.append(oracle_schema_fixture_factory("s_suppdate", "timestamp"))
 

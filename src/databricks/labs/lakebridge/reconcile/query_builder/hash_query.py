@@ -11,7 +11,7 @@ from databricks.labs.lakebridge.reconcile.query_builder.expression_generator imp
     concat,
     get_hash_transform,
     lower,
-    transform_expression,
+    transform_expression, build_column_no_alias,
 )
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 
@@ -43,20 +43,17 @@ class HashQueryBuilder(QueryBuilder):
         key_cols = hash_cols if report_type == "row" else sorted(_join_columns | self.partition_column)
 
         cols_with_alias = [
-            build_column(
-                this=col,
-                alias=DialectUtils.unnormalize_identifier(
-                    self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)
-                ),
-                quoted=True,
-            )
+            self._build_column_with_alias(col)
             for col in key_cols
         ]
 
         # in case if we have column mapping, we need to sort the target columns in the order of source columns to get
         # same hash value
         hash_cols_with_alias = [
-            {"this": col, "alias": self.table_conf.get_layer_tgt_to_src_col_mapping(col, self.layer)}
+            {
+                "this": self._build_column_name_source_normalized(col),
+                "alias": self._build_alias_source_normalized(col)
+            }
             for col in hash_cols
         ]
         sorted_hash_cols_with_alias = sorted(hash_cols_with_alias, key=lambda column: column["alias"])
@@ -71,7 +68,7 @@ class HashQueryBuilder(QueryBuilder):
         res = (
             exp.select(*hash_col_with_transform + key_cols_with_transform)
             .from_(":tbl")
-            .where(self.filter, dialect=get_dialect("databricks"))
+            .where(self.filter, dialect=dialect)
             .sql(dialect=dialect)
         )
 
@@ -83,11 +80,14 @@ class HashQueryBuilder(QueryBuilder):
         cols: list[str],
         column_alias: str,
     ) -> exp.Expression:
-        cols_with_alias = [build_column(this=col, alias=None) for col in cols]
+        cols_with_alias = [
+            build_column_no_alias(this=col)
+            for col in cols
+        ]
         cols_with_transform = self.add_transformations(
-            cols_with_alias, self.engine if self.layer == "source" else get_dialect("databricks")
+            cols_with_alias, self.engine
         )
-        col_exprs = exp.select(*cols_with_transform, dialect=get_dialect("databricks")).iter_expressions()
+        col_exprs = exp.select(*cols_with_transform, dialect=self.engine).iter_expressions()
         concat_expr = concat(list(col_exprs))
 
         if self.engine == "oracle":
