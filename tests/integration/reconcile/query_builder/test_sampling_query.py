@@ -263,7 +263,7 @@ def test_build_query_for_snowflake_without_transformations(mock_spark, table_con
         'WITH recon AS (SELECT CAST(11 AS number) AS "s_nationkey", 1 AS "s_suppkey" '
         'UNION SELECT CAST(22 AS number) AS "s_nationkey", 2 AS "s_suppkey"), src AS '
         '(SELECT COALESCE(TRIM("s_acctbal"), \'_null_recon_\') AS "s_acctbal", '
-        's_address AS "s_address", COALESCE(TRIM("s_comment"), \'_null_recon_\') AS '
+        '"s_address" AS "s_address", COALESCE(TRIM("s_comment"), \'_null_recon_\') AS '
         '"s_comment", TRIM(s_name) AS "s_name", COALESCE(TRIM("s_nationkey"), '
         '\'_null_recon_\') AS "s_nationkey", COALESCE(TRIM("s_phone"), '
         '\'_null_recon_\') AS "s_phone", TRIM(s_suppkey) AS "s_suppkey" FROM :tbl '

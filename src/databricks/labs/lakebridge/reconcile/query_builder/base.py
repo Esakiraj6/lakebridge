@@ -68,7 +68,19 @@ class QueryBuilder(ABC):
 
     @property
     def user_transformations(self) -> dict[str, str]:
-        return self._table_conf.get_transformation_dict(self._layer)
+        if self._table_conf.transformations:
+            if self.layer == "source":
+                return {
+                    trans.column_name: (trans.source if trans.source else self._data_source.normalize_identifier(trans.column_name).source_normalized)
+                    for trans in self._table_conf.transformations
+                }
+            return {
+                self._table_conf.get_layer_src_to_tgt_col_mapping(trans.column_name, self.layer): (
+                    trans.target if trans.target else self._table_conf.get_layer_src_to_tgt_col_mapping(trans.column_name, self.layer)
+                )
+                for trans in self._table_conf.transformations
+            }
+        return {}
 
     @property
     def aggregates(self) -> list[Aggregate] | None:
