@@ -4,7 +4,6 @@ from functools import reduce
 import sqlglot.expressions as exp
 from sqlglot import Dialect
 
-from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.query_builder.base import QueryBuilder
 from databricks.labs.lakebridge.reconcile.query_builder.expression_generator import (
     build_column,

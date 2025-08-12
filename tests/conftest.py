@@ -48,6 +48,17 @@ def column_mapping():
         ColumnMapping(source_name="s_comment", target_name="s_comment_t"),
     ]
 
+@pytest.fixture
+def normalized_column_mapping():
+    return [
+        ColumnMapping(source_name="`s_suppkey`", target_name="`s_suppkey_t`"),
+        ColumnMapping(source_name="`s_address`", target_name="`s_address_t`"),
+        ColumnMapping(source_name="`s_nationkey`", target_name="`s_nationkey_t`"),
+        ColumnMapping(source_name="`s_phone`", target_name="`s_phone_t`"),
+        ColumnMapping(source_name="`s_acctbal`", target_name="`s_acctbal_t`"),
+        ColumnMapping(source_name="`s_comment`", target_name="`s_comment_t`"),
+    ]
+
 
 @pytest.fixture
 def column_mapping_normalized():
