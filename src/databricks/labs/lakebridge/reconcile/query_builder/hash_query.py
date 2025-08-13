@@ -13,7 +13,6 @@ from databricks.labs.lakebridge.reconcile.query_builder.expression_generator imp
     transform_expression,
     build_column_no_alias,
 )
-from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +57,11 @@ class HashQueryBuilder(QueryBuilder):
         )
         hash_col_with_transform = [self._generate_hash_algorithm(hashcols_sorted_as_src_seq, _HASH_COLUMN_NAME)]
 
-        dialect = self.engine if self.layer == "source" else get_dialect("databricks")
         res = (
             exp.select(*hash_col_with_transform + key_cols_with_transform)
             .from_(":tbl")
-            .where(self.filter, dialect=dialect)
-            .sql(dialect=dialect)
+            .where(self.filter, dialect=self.engine)
+            .sql(dialect=self.engine)
         )
 
         logger.info(f"Hash Query for {self.layer}: {res}")
@@ -74,9 +72,9 @@ class HashQueryBuilder(QueryBuilder):
         cols: list[str],
         column_alias: str,
     ) -> exp.Expression:
-        cols_with_alias = [build_column_no_alias(this=col) for col in cols]
-        cols_with_transform = self.add_transformations(cols_with_alias, self.engine)
-        col_exprs = exp.select(*cols_with_transform, dialect=self.engine).iter_expressions()
+        cols_no_alias = [build_column_no_alias(this=col) for col in cols]
+        cols_with_transform = self.add_transformations(cols_no_alias, self.engine)
+        col_exprs = exp.select(*cols_with_transform).iter_expressions()
         concat_expr = concat(list(col_exprs))
 
         if self.engine == "oracle":
