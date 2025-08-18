@@ -50,13 +50,10 @@ def test_configure_synapse_credentials(tmp_path):
         {
             r"Enter secret vault type \(local \| env\)": sorted(['local', 'env']).index("env"),
             r"Enter Synapse workspace name": "test-workspace",
-            r"Enter dedicated SQL endpoint": "test-dedicated-endpoint",
-            r"Enter serverless SQL endpoint": "test-serverless-endpoint",
             r"Enter SQL user": "test-user",
             r"Enter SQL password": "test-password",
             r"Enter timezone \(e.g. America/New_York\)": "UTC",
             r"Enter the ODBC driver installed locally": "ODBC Driver 18 for SQL Server",
-            r"Enter development endpoint": "test-dev-endpoint",
             r"Enter Azure client ID": "test-client-id",
             r"Enter Azure tenant ID": "test-tenant-id",
             r"Enter Azure client secret": "test-client-secret",
@@ -85,15 +82,15 @@ def test_configure_synapse_credentials(tmp_path):
         'synapse': {
             'workspace': {
                 'name': 'test-workspace',
-                'dedicated_sql_endpoint': 'test-dedicated-endpoint',
-                'serverless_sql_endpoint': 'test-serverless-endpoint',
+                'dedicated_sql_endpoint': 'test-workspace.sql.azuresynapse.net',
+                'serverless_sql_endpoint': 'test-workspace-ondemand.sql.azuresynapse.net',
                 'sql_user': 'test-user',
                 'sql_password': 'test-password',
                 'tz_info': 'UTC',
                 'driver': 'ODBC Driver 18 for SQL Server',
             },
             'azure_api_access': {
-                'development_endpoint': 'test-dev-endpoint',
+                'development_endpoint': 'https://test-workspace.dev.azuresynapse.net',
                 'azure_client_id': 'test-client-id',
                 'azure_tenant_id': 'test-tenant-id',
                 'azure_client_secret': 'test-client-secret',
@@ -115,7 +112,6 @@ def test_configure_synapse_credentials(tmp_path):
 
     with open(file, 'r', encoding='utf-8') as file:
         credentials = yaml.safe_load(file)
-
     assert credentials == expected_credentials
 
 

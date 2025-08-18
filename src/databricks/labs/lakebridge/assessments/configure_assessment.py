@@ -125,8 +125,6 @@ class ConfigureSynapseAssessment(AssessmentConfigurator):
         logger.info("Please provide Synapse Workspace settings:")
         synapse_workspace = {
             "name": self.prompts.question("Enter Synapse workspace name"),
-            "dedicated_sql_endpoint": self.prompts.question("Enter dedicated SQL endpoint"),
-            "serverless_sql_endpoint": self.prompts.question("Enter serverless SQL endpoint"),
             "sql_user": self.prompts.question("Enter SQL user"),
             "sql_password": self.prompts.question("Enter SQL password"),
             "tz_info": self.prompts.question("Enter timezone (e.g. America/New_York)", default="UTC"),
@@ -134,11 +132,13 @@ class ConfigureSynapseAssessment(AssessmentConfigurator):
                 "Enter the ODBC driver installed locally", default="ODBC Driver 18 for SQL Server"
             ),
         }
+        synapse_workspace["dedicated_sql_endpoint"] = f"{synapse_workspace['name']}.sql.azuresynapse.net"
+        synapse_workspace["serverless_sql_endpoint"] = f"{synapse_workspace['name']}-ondemand.sql.azuresynapse.net"
 
         # Azure API Access Settings
         logger.info("Please provide Azure API access settings:")
         azure_api_access = {
-            "development_endpoint": self.prompts.question("Enter development endpoint"),
+            "development_endpoint": f"https://{synapse_workspace['name']}.dev.azuresynapse.net",
             "azure_client_id": self.prompts.question("Enter Azure client ID"),
             "azure_tenant_id": self.prompts.question("Enter Azure tenant ID"),
             "azure_client_secret": self.prompts.question("Enter Azure client secret"),
