@@ -30,7 +30,7 @@ def execute():
         tz_info = synapse_workspace_settings["workspace"]["tz_info"]
         workspace_tz = zoneinfo.ZoneInfo(tz_info)
         workspace_name = synapse_workspace_settings["workspace"]["name"]
-        logger.info(f"workspace_name → {workspace_name}")
+        logger.info(f"workspace_name: {workspace_name}")
 
         artifacts_client = get_synapse_artifacts_client(synapse_workspace_settings)
         workspace = SynapseWorkspace(workspace_tz, artifacts_client)
@@ -39,12 +39,12 @@ def execute():
         synapse_metrics = SynapseMetrics(metrics_client)
 
         workspace_info = workspace.get_workspace_info()
-        print(workspace_info)
+        logger.info(f"workspace info: {workspace_info}")
 
         if "id" not in workspace_info:
             raise ValueError("ERROR: Missing Workspace ID for extracting Workspace Level Metrics")
         workspace_resource_id = workspace_info["id"]
-        logger.info(f"workspace_resource_id  →  {workspace_resource_id}")
+        logger.info(f"workspace_resource_id : {workspace_resource_id}")
         metrics_df = synapse_metrics.get_workspace_level_metrics(workspace_resource_id)
         insert_df_to_duckdb(metrics_df, db_path, "metrics_workspace_level_metrics")
 
@@ -53,8 +53,8 @@ def execute():
         exclude_dedicated_sql_pools = synapse_profiler_settings.get("exclude_dedicated_sql_pools", None)
         dedicated_sql_pools_profiling_list = synapse_profiler_settings.get("dedicated_sql_pools_profiling_list", None)
 
-        logger.info(f" exclude_dedicated_sql_pools        →  {exclude_dedicated_sql_pools}")
-        logger.info(f" dedicated_sql_pools_profiling_list →  {dedicated_sql_pools_profiling_list}")
+        logger.info(f" exclude_dedicated_sql_pools: {exclude_dedicated_sql_pools}")
+        logger.info(f" dedicated_sql_pools_profiling_list: {dedicated_sql_pools_profiling_list}")
 
         if exclude_dedicated_sql_pools:
             logger.info(
@@ -98,8 +98,8 @@ def execute():
         exclude_spark_pools = synapse_profiler_settings.get("exclude_spark_pools", None)
         spark_pools_profiling_list = synapse_profiler_settings.get("spark_pools_profiling_list", None)
 
-        logger.info(f" exclude_spark_pools        →  {exclude_spark_pools}")
-        logger.info(f" spark_pools_profiling_list →  {spark_pools_profiling_list}")
+        logger.info(f" exclude_spark_pools       : {exclude_spark_pools}")
+        logger.info(f" spark_pools_profiling_list: {spark_pools_profiling_list}")
 
         if exclude_spark_pools:
             logger.info(
@@ -137,12 +137,12 @@ def execute():
 
             # Insert the combined metrics into DuckDB
             insert_df_to_duckdb(spark_pools_df, db_path, step_name)
-            logger.info(">End")
 
         # This is the output format expected by the pipeline.py which orchestrates the execution of this script
         print(json.dumps({"status": "success", "message": "Data loaded successfully"}))
 
     except Exception as e:
+        logger.error(f"Failed to extract info for Synapse Monitoring Metrics: {str(e)}")
         print(json.dumps({"status": "error", "message": str(e)}), file=sys.stderr)
         sys.exit(1)
 

@@ -21,7 +21,9 @@ def test_configure_sqlserver_credentials(tmp_path):
         }
     )
     file = tmp_path / ".credentials.yml"
-    assessment = ConfigureSqlServerAssessment(product_name="lakebridge", prompts=prompts, credential_file=file)
+    assessment = ConfigureSqlServerAssessment(
+        product_name="lakebridge", source_name="mssql", prompts=prompts, credential_file=file
+    )
     assessment.run()
 
     expected_credentials = {
@@ -72,7 +74,9 @@ def test_configure_synapse_credentials(tmp_path):
         }
     )
     file = tmp_path / ".credentials.yml"
-    assessment = ConfigureSynapseAssessment(product_name="lakebridge", prompts=prompts, credential_file=file)
+    assessment = ConfigureSynapseAssessment(
+        product_name="lakebridge", source_name="synapse", prompts=prompts, credential_file=file
+    )
     assessment.run()
 
     expected_credentials = {

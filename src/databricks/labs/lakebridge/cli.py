@@ -22,10 +22,9 @@ from databricks.labs.blueprint.tui import Prompts
 from databricks.labs.bladespector.analyzer import Analyzer
 
 
-from databricks.labs.lakebridge.assessments.configure_assessment import (
-    create_assessment_configurator,
-    PROFILER_SOURCE_SYSTEM,
-)
+from databricks.labs.lakebridge.assessments.configure_assessment import create_assessment_configurator
+from databricks.labs.lakebridge.assessments import PROFILER_SOURCE_SYSTEM
+from databricks.labs.lakebridge.assessments.profiler import Profiler
 
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
@@ -657,6 +656,21 @@ def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_
     logger.info(
         f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}"
     )
+
+
+@lakebridge.command()
+def execute_database_profiler(w: WorkspaceClient):
+    """Run the Profiler"""
+    with_user_agent_extra("cmd", "profiler")
+    ctx = ApplicationContext(w)
+    prompts = ctx.prompts
+    source_tech = prompts.choice("Select the source technology", Profiler.supported_source_technologies())
+    with_user_agent_extra("profiler_source_tech", make_alphanum_or_semver(source_tech))
+    user = ctx.current_user
+    logger.debug(f"User: {user}")
+    profiler = Profiler()
+    # TODO: Add extractor logic to ApplicationContext instead of creating inside the Profiler class
+    profiler.profile(source_tech, None)
 
 
 if __name__ == "__main__":
