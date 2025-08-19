@@ -137,7 +137,20 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
 
     def normalize_identifier(self, identifier: str) -> NormalizedIdentifier:
         return DialectUtils.normalize_identifier(
-            identifier,
+            TSQLServerDataSource._normalize_quotes(identifier),
             source_start_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"],
             source_end_delimiter=TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"],
         )
+
+    @staticmethod
+    def _normalize_quotes(identifier: str):
+        if DialectUtils.is_already_delimited(identifier, '"', '"'):
+            identifier = identifier[1:-1]
+            identifier = identifier.replace('""', '"')
+            identifier = (TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"]
+                          + identifier
+                          + TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"])
+            return identifier
+        else:
+            return identifier
+
