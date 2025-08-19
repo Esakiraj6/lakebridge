@@ -17,9 +17,8 @@ class DialectUtils:
             DialectUtils._ANSI_IDENTIFIER_DELIMITER,
             DialectUtils._ANSI_IDENTIFIER_DELIMITER,
         )
-        ansi = DialectUtils._escape_backticks(ansi[1:-1]) if ansi else ansi
-        ansi = DialectUtils._escape_source_end_delimiter(ansi, source_start_delimiter, source_end_delimiter)
 
+        # Input was already ansi normalized
         if ansi == identifier:
             source = DialectUtils._normalize_identifier_source_agnostic(
                 identifier,
@@ -28,10 +27,26 @@ class DialectUtils:
                 source_start_delimiter,
                 source_end_delimiter,
             )
+
+            # Ansi has backticks escaped which has to be unescaped for other delimiters and escape source end delimiters
+            if source != ansi:
+                source = DialectUtils._unescape_source_end_delimiter(source, DialectUtils._ANSI_IDENTIFIER_DELIMITER)
+                source = DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
         else:
+            # Make sure backticks are escaped properly for ansi and source end delimiters are unescaped
+            ansi = DialectUtils._unescape_source_end_delimiter(ansi, source_end_delimiter)
+            ansi = DialectUtils._escape_backticks(ansi) if ansi else ansi
+
+            if source_end_delimiter != DialectUtils._ANSI_IDENTIFIER_DELIMITER:
+                ansi = DialectUtils._unescape_source_end_delimiter(ansi, source_end_delimiter)
+
             source = DialectUtils._normalize_identifier_source_agnostic(
                 identifier, source_start_delimiter, source_end_delimiter, source_start_delimiter, source_end_delimiter
             )
+
+            # Make sure source end delimiter is escaped else nothing as it was already normalized
+            if source != identifier:
+                source = DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
 
         return NormalizedIdentifier(ansi, source)
 
@@ -63,10 +78,16 @@ class DialectUtils:
 
     @staticmethod
     def _escape_backticks(identifier: str) -> str:
+        identifier = identifier[1:-1]
         identifier = identifier.replace("`", "``")
         return f"`{identifier}`"
 
     @staticmethod
-    def _escape_source_end_delimiter(identifier: str, source_start_delimiter: str, source_end_delimiter: str) -> str:
+    def _unescape_source_end_delimiter(identifier: str, source_end_delimiter: str) -> str:
         return identifier.replace(f"{source_end_delimiter}{source_end_delimiter}", source_end_delimiter)
 
+    @staticmethod
+    def _escape_source_end_delimiter(identifier: str, start_end_delimiter, source_end_delimiter: str) -> str:
+        identifier = identifier[1:-1]
+        identifier = identifier.replace(source_end_delimiter, f"{source_end_delimiter}{source_end_delimiter}")
+        return f"{start_end_delimiter}{identifier}{source_end_delimiter}"

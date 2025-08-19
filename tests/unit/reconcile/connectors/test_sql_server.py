@@ -187,6 +187,7 @@ def test_normalize_identifier():
     assert data_source.normalize_identifier('"b"') == NormalizedIdentifier("`b`", "[b]")
     assert data_source.normalize_identifier("[c]") == NormalizedIdentifier("`c`", "[c]")
     assert data_source.normalize_identifier('"`e`f`"') == NormalizedIdentifier("```e``f```", '[`e`f`]')
+    assert data_source.normalize_identifier('`e``f`') == NormalizedIdentifier("`e``f`", '[e`f]')
     assert data_source.normalize_identifier('[ g h ]') == NormalizedIdentifier("` g h `", '[ g h ]')
     assert data_source.normalize_identifier('[[i]]]') == NormalizedIdentifier("`[i]`", '[[i]]]')
     assert data_source.normalize_identifier('"""j""k"""') == NormalizedIdentifier('`"j"k"`', '["j"k"]')
