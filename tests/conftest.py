@@ -15,6 +15,8 @@ from pyspark.sql.types import (
 )
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import iam
+
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.reconcile.recon_config import (
     Table,
     JdbcReaderOptions,
@@ -210,15 +212,25 @@ def report_tables_schema():
     return recon_schema, metrics_schema, details_schema
 
 
+# TODO remove normalized_ansi and normalized_source
+#  and make source delimiter is required so our specs
+#  are behaving like production which uses normalization
 def schema_fixture_factory(
-    column_name: str, data_type: str, normalized_ansi: str | None = None, normalized_source: str | None = None
+    column_name: str,
+    data_type: str,
+    normalized_ansi: str | None = None,
+    normalized_source: str | None = None,
+    source_delimiter: str | None = None,
 ) -> Schema:
-    return Schema(
-        column_name,
-        data_type,
-        normalized_ansi if normalized_ansi else column_name,
-        normalized_source if normalized_source else column_name,
-    )
+    normalized_ansi = normalized_ansi if normalized_ansi else column_name
+    normalized_source = normalized_source if normalized_source else column_name
+
+    if source_delimiter:
+        normalized = DialectUtils.normalize_identifier(column_name, source_delimiter, source_delimiter)
+        normalized_ansi = normalized.ansi_normalized
+        normalized_source = normalized.source_normalized
+
+    return Schema(normalized_ansi, data_type, normalized_ansi, normalized_source)  # Production uses ansi here
 
 
 @pytest.fixture
