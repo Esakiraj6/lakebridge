@@ -49,6 +49,12 @@ def _build_column_selector(table_name, column_name):
     )
 
 
+def _build_mismatch_column(table, column):
+    return col(DialectUtils.ansi_normalize_identifier(column)).alias(
+        DialectUtils.ansi_normalize_identifier(column.replace(f'{table}_', '').lower())
+    )
+
+
 def reconcile_data(
     source: DataFrame,
     target: DataFrame,
@@ -84,24 +90,24 @@ def reconcile_data(
         df.filter(col(f"{source_alias}_{_HASH_COLUMN_NAME}").isNull())
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{target_alias}_', '').lower())
+                _build_mismatch_column(target_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{target_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"`{_HASH_COLUMN_NAME}`")
     )
 
     missing_in_tgt = (
         df.filter(col(f"{target_alias}_{_HASH_COLUMN_NAME}").isNull())
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{source_alias}_', '').lower())
+                _build_mismatch_column(source_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{source_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"`{_HASH_COLUMN_NAME}`")
     )
     mismatch_count = 0
     if mismatch:
@@ -133,12 +139,12 @@ def _get_mismatch_data(df: DataFrame, src_alias: str, tgt_alias: str) -> DataFra
         .filter(col("hash_match") == lit(False))
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{src_alias}_', '').lower())
+                _build_mismatch_column(src_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{src_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"`{_HASH_COLUMN_NAME}`")
     )
 
 

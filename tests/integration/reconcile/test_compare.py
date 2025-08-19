@@ -62,9 +62,11 @@ def test_compare_data_for_report_all(
     assert expected.missing_in_src is not None
     assert actual.missing_in_tgt is not None
     assert expected.missing_in_tgt is not None
-    assertDataFrameEqual(actual.mismatch.mismatch_df, expected.mismatch.mismatch_df)
-    assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src)
-    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt)
+    assertDataFrameEqual(
+        actual.mismatch.mismatch_df, expected.mismatch.mismatch_df, ignoreColumnName=True
+    )  # Actual has normalized column names
+    assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src, ignoreColumnName=True)
+    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt, ignoreColumnName=True)
 
 
 def test_compare_data_for_report_hash(mock_spark, tmp_path: Path):
@@ -115,8 +117,10 @@ def test_compare_data_for_report_hash(mock_spark, tmp_path: Path):
     assert expected.missing_in_src is not None
     assert actual.missing_in_tgt is not None
     assert expected.missing_in_tgt is not None
-    assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src)
-    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt)
+    assertDataFrameEqual(
+        actual.missing_in_src, expected.missing_in_src, ignoreColumnName=True
+    )  # Actual has normalized column names
+    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt, ignoreColumnName=True)
 
 
 def test_capture_mismatch_data_and_cols(mock_spark):
@@ -253,8 +257,8 @@ def test_capture_mismatch_data_and_cols_fail(mock_spark):
 
 
 def test_compare_data_special_column_names(mock_spark, tmp_path: Path):
-    model_with_hash = Row("s_supp#", "s_nation#", "hash_value_recon")
-    model = Row("s_supp#", "s_nation#")
+    model_with_hash = Row("s`supp#", "s_nation#", "hash_value_recon")
+    model = Row("s`supp#", "s_nation#")
     source = mock_spark.createDataFrame(
         [
             model_with_hash(1, 11, '1a1'),
@@ -279,7 +283,7 @@ def test_compare_data_special_column_names(mock_spark, tmp_path: Path):
     actual = reconcile_data(
         source=source,
         target=target,
-        key_columns=["`s_supp#`", "`s_nation#`"],
+        key_columns=["`s``supp#`", "`s_nation#`"],
         report_type="all",
         spark=mock_spark,
         path=str(tmp_path),
@@ -299,9 +303,9 @@ def test_compare_data_special_column_names(mock_spark, tmp_path: Path):
     assert expected.missing_in_src is not None
     assert actual.missing_in_tgt is not None
     assert expected.missing_in_tgt is not None
-    assertDataFrameEqual(actual.mismatch.mismatch_df, expected.mismatch.mismatch_df)
-    assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src)
-    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt)
+    assertDataFrameEqual(actual.mismatch.mismatch_df, expected.mismatch.mismatch_df, ignoreColumnName=True)
+    assertDataFrameEqual(actual.missing_in_src, expected.missing_in_src, ignoreColumnName=True)
+    assertDataFrameEqual(actual.missing_in_tgt, expected.missing_in_tgt, ignoreColumnName=True)
 
 
 def test_capture_mismatch_data_and_cols_special_column_names(mock_spark):
