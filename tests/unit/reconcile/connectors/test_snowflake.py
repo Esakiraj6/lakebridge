@@ -324,4 +324,3 @@ def test_normalize_identifier():
     assert data_source.normalize_identifier('" g h "') == NormalizedIdentifier("` g h `", '" g h "')
     assert data_source.normalize_identifier('"""j""k"""') == NormalizedIdentifier('`"j"k"`', '"""j""k"""')
     assert data_source.normalize_identifier('"j""k"') == NormalizedIdentifier('`j"k`', '"j""k"')
-

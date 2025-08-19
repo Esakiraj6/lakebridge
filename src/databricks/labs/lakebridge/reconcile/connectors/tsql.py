@@ -147,10 +147,11 @@ class TSQLServerDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
         if DialectUtils.is_already_delimited(identifier, '"', '"'):
             identifier = identifier[1:-1]
             identifier = identifier.replace('""', '"')
-            identifier = (TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"]
-                          + identifier
-                          + TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"])
-            return identifier
-        else:
+            identifier = (
+                TSQLServerDataSource._IDENTIFIER_DELIMITER["prefix"]
+                + identifier
+                + TSQLServerDataSource._IDENTIFIER_DELIMITER["suffix"]
+            )
             return identifier
 
+        return identifier
