@@ -31,7 +31,11 @@ class DialectUtils:
             # Ansi has backticks escaped which has to be unescaped for other delimiters and escape source end delimiters
             if source != ansi:
                 source = DialectUtils._unescape_source_end_delimiter(source, DialectUtils._ANSI_IDENTIFIER_DELIMITER)
-                source = DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
+                source = (
+                    DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
+                    if source
+                    else source
+                )
         else:
             # Make sure backticks are escaped properly for ansi and source end delimiters are unescaped
             ansi = DialectUtils._unescape_source_end_delimiter(ansi, source_end_delimiter)
@@ -46,7 +50,11 @@ class DialectUtils:
 
             # Make sure source end delimiter is escaped else nothing as it was already normalized
             if source != identifier:
-                source = DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
+                source = (
+                    DialectUtils._escape_source_end_delimiter(source, source_start_delimiter, source_end_delimiter)
+                    if source
+                    else source
+                )
 
         return NormalizedIdentifier(ansi, source)
 
