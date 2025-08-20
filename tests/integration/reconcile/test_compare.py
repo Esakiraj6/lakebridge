@@ -305,8 +305,8 @@ def test_compare_data_special_column_names(mock_spark, tmp_path: Path):
 
 
 def test_capture_mismatch_data_and_cols_special_column_names(mock_spark):
-    model = Row("s_supp#", "s_nation#", "s$name")
-    expected_model = Row("s_supp#", "s_nation#", "s$name_base", "s$name_compare", "s$name_match")
+    model = Row("s`supp#", "s_nation#", "s$name")
+    expected_model = Row("s`supp#", "s_nation#", "s$name_base", "s$name_compare", "s$name_match")
     source = mock_spark.createDataFrame(
         [
             model(2, 22, '2b2'),
@@ -322,7 +322,7 @@ def test_capture_mismatch_data_and_cols_special_column_names(mock_spark):
         ]
     )
 
-    actual = capture_mismatch_data_and_columns(source=source, target=target, key_columns=["`s_supp#`", "`s_nation#`"])
+    actual = capture_mismatch_data_and_columns(source=source, target=target, key_columns=["`s``supp#`", "`s_nation#`"])
 
     expected_df = mock_spark.createDataFrame(
         [
