@@ -225,7 +225,9 @@ def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str
         source.alias('base').join(other=target.alias('compare'), on=key_columns, how="inner").select(*select_expr)
     )
 
-    compare_columns = [column for column in mismatch_df.columns if column not in key_columns]
+    compare_columns = [
+        DialectUtils.ansi_normalize_identifier(column) for column in mismatch_df.columns if column not in key_columns
+    ]
     return mismatch_df.select(*key_cols + sorted(compare_columns))
 
 
