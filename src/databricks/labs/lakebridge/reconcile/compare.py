@@ -43,15 +43,16 @@ def _generate_join_condition(source_alias, target_alias, key_columns):
 
 
 def _build_column_selector(table_name, column_name):
+    alias = DialectUtils.ansi_normalize_identifier(f"{table_name}_{DialectUtils.unnormalize_identifier(column_name)}")
     return (
         f'{table_name}.{DialectUtils.ansi_normalize_identifier(column_name)}'
-        f' as `{table_name}_{DialectUtils.unnormalize_identifier(column_name)}`'
+        f' as {alias}'
     )
 
 
 def _build_mismatch_column(table, column):
     return col(DialectUtils.ansi_normalize_identifier(column)).alias(
-        DialectUtils.ansi_normalize_identifier(column.replace(f'{table}_', '').lower())
+        DialectUtils.unnormalize_identifier(column.replace(f'{table}_', '').lower())
     )
 
 
@@ -95,7 +96,7 @@ def reconcile_data(
                 if col_name.startswith(f'{target_alias}_')
             ]
         )
-        .drop(f"`{_HASH_COLUMN_NAME}`")
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
 
     missing_in_tgt = (
@@ -107,7 +108,7 @@ def reconcile_data(
                 if col_name.startswith(f'{source_alias}_')
             ]
         )
-        .drop(f"`{_HASH_COLUMN_NAME}`")
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
     mismatch_count = 0
     if mismatch:
@@ -144,7 +145,7 @@ def _get_mismatch_data(df: DataFrame, src_alias: str, tgt_alias: str) -> DataFra
                 if col_name.startswith(f'{src_alias}_')
             ]
         )
-        .drop(f"`{_HASH_COLUMN_NAME}`")
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
 
 
