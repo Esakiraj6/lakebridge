@@ -197,11 +197,15 @@ def _unnormalize_mismatch_df_col(column, suffix):
 
 def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str], column_list: list[str]):
     source_aliased = [
-        col('base.' + DialectUtils.ansi_normalize_identifier(column)).alias(_unnormalize_mismatch_df_col(column, '_base'))
+        col('base.' + DialectUtils.ansi_normalize_identifier(column)).alias(
+            _unnormalize_mismatch_df_col(column, '_base')
+        )
         for column in column_list
     ]
     target_aliased = [
-        col('compare.' + DialectUtils.ansi_normalize_identifier(column)).alias(_unnormalize_mismatch_df_col(column, '_compare'))
+        col('compare.' + DialectUtils.ansi_normalize_identifier(column)).alias(
+            _unnormalize_mismatch_df_col(column, '_compare')
+        )
         for column in column_list
     ]
 

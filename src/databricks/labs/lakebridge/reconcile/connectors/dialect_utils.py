@@ -16,7 +16,11 @@ class DialectUtils:
         :return: ansi identifier without the outer backticks
         """
         ansi = DialectUtils.ansi_normalize_identifier(identifier)
-        unescape = DialectUtils._unescape_source_end_delimiter(ansi[1:-1], DialectUtils._ANSI_IDENTIFIER_DELIMITER) if ansi else ansi
+        unescape = (
+            DialectUtils._unescape_source_end_delimiter(ansi[1:-1], DialectUtils._ANSI_IDENTIFIER_DELIMITER)
+            if ansi
+            else ansi
+        )
         return unescape
 
     @staticmethod
