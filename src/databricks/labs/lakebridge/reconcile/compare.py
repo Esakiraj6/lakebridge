@@ -43,9 +43,13 @@ def _generate_join_condition(source_alias, target_alias, key_columns):
 
 
 def _build_column_selector(table_name, column_name):
-    return (
-        f'{table_name}.{DialectUtils.ansi_normalize_identifier(column_name)}'
-        f' as `{table_name}_{DialectUtils.unnormalize_identifier(column_name)}`'
+    alias = DialectUtils.ansi_normalize_identifier(f"{table_name}_{DialectUtils.unnormalize_identifier(column_name)}")
+    return f'{table_name}.{DialectUtils.ansi_normalize_identifier(column_name)} as {alias}'
+
+
+def _build_mismatch_column(table, column):
+    return col(DialectUtils.ansi_normalize_identifier(column)).alias(
+        DialectUtils.unnormalize_identifier(column.replace(f'{table}_', '').lower())
     )
 
 
@@ -84,24 +88,24 @@ def reconcile_data(
         df.filter(col(f"{source_alias}_{_HASH_COLUMN_NAME}").isNull())
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{target_alias}_', '').lower())
+                _build_mismatch_column(target_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{target_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
 
     missing_in_tgt = (
         df.filter(col(f"{target_alias}_{_HASH_COLUMN_NAME}").isNull())
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{source_alias}_', '').lower())
+                _build_mismatch_column(source_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{source_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
     mismatch_count = 0
     if mismatch:
@@ -133,26 +137,26 @@ def _get_mismatch_data(df: DataFrame, src_alias: str, tgt_alias: str) -> DataFra
         .filter(col("hash_match") == lit(False))
         .select(
             *[
-                col(col_name).alias(col_name.replace(f'{src_alias}_', '').lower())
+                _build_mismatch_column(src_alias, col_name)
                 for col_name in df.columns
                 if col_name.startswith(f'{src_alias}_')
             ]
         )
-        .drop(_HASH_COLUMN_NAME)
+        .drop(f"{_HASH_COLUMN_NAME}")
     )
 
 
-def _build_unnormalized_df(df: DataFrame) -> DataFrame:
-    unnormalized_columns = [
-        col(DialectUtils.unnormalize_identifier(column)).alias(DialectUtils.unnormalize_identifier(column))
+def _build_capture_df(df: DataFrame) -> DataFrame:
+    columns = [
+        col(DialectUtils.ansi_normalize_identifier(column)).alias(DialectUtils.unnormalize_identifier(column))
         for column in df.columns
     ]
-    return df.select(*unnormalized_columns)
+    return df.select(*columns)
 
 
 def capture_mismatch_data_and_columns(source: DataFrame, target: DataFrame, key_columns: list[str]) -> MismatchOutput:
-    source_df = _build_unnormalized_df(source)
-    target_df = _build_unnormalized_df(target)
+    source_df = _build_capture_df(source)
+    target_df = _build_capture_df(target)
     unnormalized_key_columns = [DialectUtils.unnormalize_identifier(column) for column in key_columns]
 
     source_columns = source_df.columns
@@ -193,11 +197,13 @@ def _unnormalize_mismatch_df_col(column, suffix):
 
 def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str], column_list: list[str]):
     source_aliased = [
-        col('base.' + DialectUtils.unnormalize_identifier(column)).alias(_unnormalize_mismatch_df_col(column, '_base'))
+        col('base.' + DialectUtils.ansi_normalize_identifier(column)).alias(
+            _unnormalize_mismatch_df_col(column, '_base')
+        )
         for column in column_list
     ]
     target_aliased = [
-        col('compare.' + DialectUtils.unnormalize_identifier(column)).alias(
+        col('compare.' + DialectUtils.ansi_normalize_identifier(column)).alias(
             _unnormalize_mismatch_df_col(column, '_compare')
         )
         for column in column_list
@@ -209,22 +215,20 @@ def _get_mismatch_df(source: DataFrame, target: DataFrame, key_columns: list[str
         )
         for column in column_list
     ]
-    key_cols = [col(DialectUtils.unnormalize_identifier(column)) for column in key_columns]
+    key_cols = [col(DialectUtils.ansi_normalize_identifier(column)) for column in key_columns]
     select_expr = key_cols + source_aliased + target_aliased + match_expr
 
-    filter_columns = " and ".join([_unnormalize_mismatch_df_col(column, '_match') for column in column_list])
-    filter_expr = ~expr(filter_columns)
-
     logger.info(f"KEY COLUMNS: {key_columns}")
-    logger.info(f"FILTER COLUMNS: {filter_expr}")
     logger.info(f"SELECT COLUMNS: {select_expr}")
 
     mismatch_df = (
         source.alias('base').join(other=target.alias('compare'), on=key_columns, how="inner").select(*select_expr)
     )
 
-    compare_columns = [column for column in mismatch_df.columns if column not in key_columns]
-    return mismatch_df.select(*key_columns + sorted(compare_columns))
+    compare_columns = [
+        DialectUtils.ansi_normalize_identifier(column) for column in mismatch_df.columns if column not in key_columns
+    ]
+    return mismatch_df.select(*key_cols + sorted(compare_columns))
 
 
 def _generate_agg_join_condition(source_alias: str, target_alias: str, key_columns: list[str]):
