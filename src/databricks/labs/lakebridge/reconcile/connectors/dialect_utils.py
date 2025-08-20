@@ -6,6 +6,15 @@ class DialectUtils:
 
     @staticmethod
     def unnormalize_identifier(identifier: str) -> str:
+        """Return an ansi identifier without the outer backticks.
+
+        Use this at your own risk as the missing outer backticks will result in bugs.
+        E.g. <`mary's lamb`> is returned <mary's lamb> so the outer backticks are needed.
+        This is useful for scenarios where the returned identifier will be part of another delimited identifier.
+
+        :param identifier: a database identifier
+        :return: ansi identifier without the outer backticks
+        """
         ansi = DialectUtils.ansi_normalize_identifier(identifier)
         return ansi[1:-1]
 
