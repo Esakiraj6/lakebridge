@@ -1,10 +1,10 @@
 import logging
-from dataclasses import asdict
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import BooleanType, StringType, StructField, StructType
 from sqlglot import Dialect, parse_one
 
+from databricks.labs.lakebridge.reconcile.connectors.dialect_utils import DialectUtils
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 from databricks.labs.lakebridge.reconcile.recon_config import Schema, Table
 from databricks.labs.lakebridge.reconcile.recon_output_config import SchemaMatchResult, SchemaReconcileOutput
@@ -20,11 +20,9 @@ class SchemaCompare:
     ):
         self.spark = spark
 
-    # Define the schema for the schema compare DataFrame
-    _schema_compare_schema: StructType = StructType(
+    _schema_compare_output_schema: StructType = StructType(
         [
-            StructField("source_column_normalized", StringType(), False),
-            StructField("source_column_normalized_ansi", StringType(), False),
+            StructField("source_column", StringType(), False),
             StructField("source_datatype", StringType(), False),
             StructField("databricks_column", StringType(), True),
             StructField("databricks_datatype", StringType(), True),
@@ -66,16 +64,22 @@ class SchemaCompare:
         ]
         return master_schema_match_res
 
-    def _create_dataframe(self, data: list, schema: StructType) -> DataFrame:
-        """
-        :param data: Expectation is list of dataclass
-        :param schema: Target schema
-        :return: DataFrame
-        """
-        data = [tuple(asdict(item).values()) for item in data]
-        df = self.spark.createDataFrame(data, schema)
+    def _create_output_dataframe(self, data: list[SchemaMatchResult], schema: StructType) -> DataFrame:
+        """Return a user-friendly dataframe for schema compare result."""
+        transformed = []
+        for item in data:
+            output = tuple(
+                [
+                    DialectUtils.unnormalize_identifier(item.source_column_normalized_ansi),
+                    item.source_datatype,
+                    DialectUtils.unnormalize_identifier(item.databricks_column),
+                    item.databricks_datatype,
+                    item.is_valid,
+                ]
+            )
+            transformed.append(output)
 
-        return df
+        return self.spark.createDataFrame(transformed, schema)
 
     @classmethod
     def _parse(cls, source: Dialect, column: str, data_type: str) -> str:
@@ -124,6 +128,6 @@ class SchemaCompare:
             elif master.source_datatype.lower() != master.databricks_datatype.lower():
                 master.is_valid = False
 
-        df = self._create_dataframe(master_schema, self._schema_compare_schema)
+        df = self._create_output_dataframe(master_schema, self._schema_compare_output_schema)
         final_result = self._table_schema_status(master_schema)
         return SchemaReconcileOutput(final_result, df)
