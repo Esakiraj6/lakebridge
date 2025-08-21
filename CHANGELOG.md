@@ -4,54 +4,54 @@
 
 ## Analyzer
 
-- **Informatica Workflow Variable Collection**  
-    The Informatica analyzer now collects workflow variables, enhancing downstream conversion and mapping flows.  
+- **Informatica Workflow Variable Collection**
+    The Informatica analyzer now collects workflow variables, enhancing downstream conversion and mapping flows.
 ## Converters improvements
 
 ## Morpheus
-    
+
 - Expanded SQL parser for Snowflake supports full `IF...ELSEIF...ELSE` and `ELSE IF` constructs, recognizes `ELSEIF` as a keyword, and strengthens test coverage.
-    
+
 - Improvements in Snowflake `CREATE PROCEDURE` grammar, including: simplified syntax, handling of optional queries, result set variables, and better exception handling.
-    
+
 - Support for `TEMPORARY` as an interchangeable keyword for temporary objects in Snowflake parsing.
-    
+
 ## BladeBridge
 
-- **Enhanced SQL Scripting for Oracle Procedures**  
-    Multiple fixes for procedure conversion, including quoted identifiers, Japanese character support, misplaced/duplicated keywords, improved `SELECT INTO`, and more.  
-    
-- **Datastage PXPivot Conversion**  
-    Datastage’s vertical pivot (PXPivot) can now be converted to Databricks SQL, broadening ETL migration.  
-    
+- **Enhanced SQL Scripting for Oracle Procedures**
+    Multiple fixes for procedure conversion, including quoted identifiers, Japanese character support, misplaced/duplicated keywords, improved `SELECT INTO`, and more.
+
+- **Datastage PXPivot Conversion**
+    Datastage’s vertical pivot (PXPivot) can now be converted to Databricks SQL, broadening ETL migration.
+
 - **Synapse and MS SQL Configuration Improvements**
-    
+
     - Enhanced fragment breaker for standalone SELECTs
     - Improved logic and ordering for variable declarations and set operators
-    - Bugfixes for `PROC_FINISH`, WITH statement handling, and universal ETL+SQL testing  
-        
-- **Overrides-file Prompt Update**  
-    More descriptive and clear prompt for the ‘overrides-file’ option in CLI and documentation.  
-    
+    - Bugfixes for `PROC_FINISH`, WITH statement handling, and universal ETL+SQL testing
+
+- **Overrides-file Prompt Update**
+    More descriptive and clear prompt for the ‘overrides-file’ option in CLI and documentation.
+
 - **Bug Fixes & Minor Enhancements**
-    
-    - Datastage IF/THEN/ELSE and header row handling improvements  
-    - TRY/CATCH and improved `SELECT INTO #table` conversion  
-    - Better handling of set operations in SELECT/WITH  
-    - Standardized JSON configuration naming: now uses `base_<source>2databricks_<sql|sparksql|pyspark>.json`  
-    - DELETE-to-MERGE conversion, more tests, correct semicolon placement, and expanded handling of SQL scripting features  
+
+    - Datastage IF/THEN/ELSE and header row handling improvements
+    - TRY/CATCH and improved `SELECT INTO #table` conversion
+    - Better handling of set operations in SELECT/WITH
+    - Standardized JSON configuration naming: now uses `base_<source>2databricks_<sql|sparksql|pyspark>.json`
+    - DELETE-to-MERGE conversion, more tests, correct semicolon placement, and expanded handling of SQL scripting features
 
 ## Documentation
 
 - **Significant Improvements:**
     - Expanded BladeBridge and overall configuration docs, with clear instructions for extending logic, using overrides, managing outputs, and troubleshooting.
     - Updated guide on reconciling config and leveraging new CLI options.
-        
+
 
 ## General
 
 - **Security & Infrastructure Enhancements**
-    
+
     - Addressed CVE-2025-7339 (HTTP header manipulation vulnerability) by updating the `on-headers` dependency.
     - Refined handling of output folders, error files, and configuration management for reliability.
     - Improved reconcile dashboard deployment reliability—folders without a `dashboard.yml` are no longer deployed.
@@ -67,40 +67,40 @@
 ### General
 
 - **XML Encoding Support**: The `_process_one_file` function now detects and correctly handles XML files with internally-specified encoding (e.g., Windows-1252), ensuring successful parsing and conversion of non-UTF-8 files in transformation pipelines. [[#1828]](https://github.com/databrickslabs/lakebridge/issues/1828)
-        
+
 - **Test Enhancements**: Updates to test cases (`test_transpiles_informatica_with_sparksql`, `test_transpiles_all_dbt_project_files`) were made to increase reliability and provide better logging. [[#1828]](https://github.com/databrickslabs/lakebridge/issues/1828)
-    
+
 ### Morpheus transpiler
 
 - **Temporary and Transient Table Support Across Dialects**:
     - Adds parsing and SQL generation for `TEMPORARY`, `TRANSIENT`, `VOLATILE`, and other table types.
     - Databricks currently treats `TRANSIENT` tables as `TEMPORARY` (still in private preview); `READ ONLY` not yet supported.[](https://github.com/databrickslabs/lakebridge/pull/398)
-        
+
 - **Enhanced Support for T-SQL `SET` Statement Options**:
     - Parsers now recognize `SET OPTION ON|OFF` and generate structured error messages for unsupported options.
     - Adds support for finer-grained parsing of T-SQL options like `SET ANSI_NULLS`, `SET ARITHABORT`, etc.[](https://github.com/databrickslabs/lakebridge/pull/399)
-        
+
 - **Fix: CTEs in Subqueries**:
     - Corrects issue where `WITH` clauses inside DDLs (e.g. `CREATE TABLE AS`) were previously ignored by not invoking the correct visitor.[](https://github.com/databrickslabs/lakebridge/pull/403)
-        
+
 - **IR Refinement for `CREATE` Commands**:
     - Introduces a new `CreateCommand` node to better mirror SQL grammar, consolidating and simplifying previous IR structures (e.g., removing `ReplaceTable` and `ReplaceTableAsSelect`)
-        
+
 - **CREATE VIEW Implementation**:
     - Implements the `createView` grammar and logic with visitor methods and meaningful error messages for unsupported options.[](https://github.com/databrickslabs/lakebridge/pull/408)
-        
+
 
 ### BladeBridge Transpiler
 
 - **UPDATE to MERGE Logic**:
     - Conversion logic for `UPDATE...FROM` to `MERGE` implemented
     - **Post-processing Improvements**:    `convert_update_to_merge` function now ensures statement termination by checking for trailing semicolons.
-        
+
 - **Oracle Data Type Mapping Fixes**:
     - `NUMBER` without precision now maps to `DECIMAL(38,18)` instead of `DECIMAL(10,0)`.
     - Corrects `Timestamp` mapping and converts `Char(length)` to `STRING`.
     - `SYSTIMESTAMP` is now translated to `CURRENT_TIMESTAMP()`
-        
+
 - **Datastage SET VARIABLE Handling**:
     - Updates SET VARIABLE component transformation to behave like standard column expressions and prepends `SELECT` as required.[](https://github.com/databrickslabs/bladerunner/pull/409)
 ---
@@ -110,21 +110,21 @@
     - The reconcile configuration now checks for an existing `warehouse_id` in the user's Databricks config.
     - If present, it uses the existing SQL warehouse (with `CAN_USE` permission) instead of creating a new one.
     - Logs warehouse details and defers deletion for reusability. [[#1825]](https://github.com/databrickslabs/lakebridge/issues/1825)
-        
+
 ---
 ## Documentation updates
 
 - **Databricks Auth Profiles and `--profile` Option**:
     - Users can now specify which Databricks workspace to use with the `--profile` flag during installation.
     - Adds command to list available profiles. [[#1813]](https://github.com/databrickslabs/lakebridge/issues/1813)
-        
+
 - **Export Instructions for Microsoft SQL Server and Azure Synapse**:
     - Step-by-step guides added for extracting view, table, and procedure DDLs using:
         - SQL Server Management Studio (SSMS),
         - Azure Synapse Studio,
         - PowerShell via `Export-AzSynapseSqlScript` for Synapse Serverless.
     - Screenshots and Microsoft documentation links included. [[#1812]](https://github.com/databrickslabs/lakebridge/issues/1812)
-        
+
 
 ## Dependency Updates:
     - Updated `databricks-labs-blueprint` version.
@@ -144,7 +144,7 @@
 - Workaround issue loading transpiler configuration with python ≥ 3.12.4 (See [1802](https://github.com/databrickslabs/lakebridge/issues/1802)):
 Fixed an issue with transpiler configuration loading on Python 3.12.4+ by updating type hints and removing problematic imports.
 
-### Bladebridge Converter 
+### Bladebridge Converter
 *Teradata*
 - Enhanced handling of the TRUNC function and improved date part translation logic for more accurate Teradata conversions.
 
@@ -196,11 +196,11 @@ Converter Improvements
 	- ALL and ANY Subquery Expressions: The converter now understands and supports ALL and ANY subquery expressions, so you can handle more complex SQL logic with ease.
 	- Improved Snowflake LET Command: The LET command for Snowflake now works even if you don’t provide an assignment or default value.
 - BladeBridge converter:
-	- Datastage: Improved support for duplicate link names  
+	- Datastage: Improved support for duplicate link names
 	- Datastage: Fixed filter for EXPRESSION in PySpark target
 	- Informatica: Fixed output, now writing to flat file for SparkSql. Placing source post sql after the target writes
 
-Documentation Refresh  
+Documentation Refresh
 - Clearer instructions for installation, setup, and requirements. Updated examples and requirements (See [#1738](https://github.com/databrickslabs/lakebridge/issues/1738))
 - Updated converters supported dialects matrix for clarity on supported input and outputs (See [#1764](https://github.com/databrickslabs/lakebridge/pull/1764))
 - Improved Docs Sidebar Navigation: The documentation sidebar is now smarter and more interactive, making it easier to find what you need quickly. (See [#1754](https://github.com/databrickslabs/lakebridge/issues/1754))
@@ -259,7 +259,7 @@ Welcome to the inaugural release of **Lakebridge**, your all-in-one, open-source
     - Netezza
     - Oracle (incl. ADS \& Exadata)
     - Snowflake
-    - SQL Server (incl. Synapse)
+    - MS SQL Server (incl. Synapse)
     - Teradata
 - **SQL \& ETL/Orchestration Translation**: Move more than just queries—bring your workflows, too!
 - **Error Highlighting \& Compatibility Warnings**: Because nobody likes a silent failure.

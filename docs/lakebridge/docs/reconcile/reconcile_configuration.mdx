@@ -85,11 +85,12 @@ flowchart TD
 
 ## Supported Source System
 
-| Source     | Schema | Row | Data | All |
-|------------|--------|-----|------|-----|
-| Oracle     | Yes    | Yes | Yes  | Yes |
-| Snowflake  | Yes    | Yes | Yes  | Yes |
-| Databricks | Yes    | Yes | Yes  | Yes |
+| Source                        | Schema | Row | Data | All |
+|-------------------------------|--------|-----|------|-----|
+| Oracle                        | Yes    | Yes | Yes  | Yes |
+| Snowflake                     | Yes    | Yes | Yes  | Yes |
+| MS SQL Server (incl. Synapse) | Yes    | Yes | Yes  | Yes |
+| Databricks                    | Yes    | Yes | Yes  | Yes |
 
 [[back to top](#recon-config)]
 
@@ -102,7 +103,7 @@ The config file must be named as `recon_config_[DATA_SOURCE]_[SOURCE_CATALOG_OR_
 recon_config_${DATA_SOURCE}_${SOURCE_CATALOG_OR_SCHEMA}_${REPORT_TYPE}.json
 ```
 
-Please find the `Table Recon` filename examples below for the `Snowflake`, `Oracle`, `TSQL` and `Databricks` source systems.
+Please find the `Table Recon` filename examples below for the `Snowflake`, `Oracle`, `` and `Databricks` source systems.
 
 <Tabs>
     <TabItem value="snowflake" label="Snowflake" default>
@@ -131,14 +132,14 @@ Please find the `Table Recon` filename examples below for the `Snowflake`, `Orac
         ```
 
     </TabItem>
-    <TabItem value="tsql" label="TSQL">
+    <TabItem value="tsql" label="MS SQL Server (incl. Synapse)">
         ``` yaml title="recon_config_tsql_silver_data.json"
         database_config:
           source_schema: silver
           ...
         metadata_config:
           ...
-        data_source: tsql
+        data_source: mssql
         report_type: data
         ...
         ```
