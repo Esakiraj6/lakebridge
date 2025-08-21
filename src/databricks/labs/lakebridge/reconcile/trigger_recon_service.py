@@ -25,6 +25,7 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
 )
 from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.schema_compare import SchemaCompare
+from databricks.labs.lakebridge.reconcile.normalize_recon_config_service import NormalizeReconConfigService
 from databricks.labs.lakebridge.transpiler.execute import verify_workspace_client
 from databricks.labs.lakebridge.transpiler.sqlglot.dialect_utils import get_dialect
 
@@ -110,9 +111,12 @@ class TriggerReconService:
         reconcile_config: ReconcileConfig,
         table_conf: Table,
     ):
+        normalized_table_conf = NormalizeReconConfigService(
+            reconciler.source, reconciler.target
+        ).normalize_recon_table_config(table_conf)
 
         schema_reconcile_output, data_reconcile_output, recon_process_duration = TriggerReconService._do_recon_one(
-            reconciler, reconcile_config, table_conf
+            reconciler, reconcile_config, normalized_table_conf
         )
 
         TriggerReconService.persist_delta_table(
@@ -122,7 +126,7 @@ class TriggerReconService:
             schema_reconcile_output,
             data_reconcile_output,
             reconcile_config,
-            table_conf,
+            normalized_table_conf,
             recon_process_duration,
         )
 

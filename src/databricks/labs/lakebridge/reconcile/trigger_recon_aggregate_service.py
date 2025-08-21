@@ -18,6 +18,7 @@ from databricks.labs.lakebridge.reconcile.recon_output_config import (
 )
 from databricks.labs.lakebridge.reconcile.reconciliation import Reconciliation
 from databricks.labs.lakebridge.reconcile.trigger_recon_service import TriggerReconService
+from databricks.labs.lakebridge.reconcile.normalize_recon_config_service import NormalizeReconConfigService
 
 
 class TriggerReconAggregateService:
@@ -35,20 +36,24 @@ class TriggerReconAggregateService:
 
         # Get the Aggregated Reconciliation Output for each table
         for table_conf in table_recon.tables:
+            normalized_table_conf = NormalizeReconConfigService(
+                reconciler.source, reconciler.target
+            ).normalize_recon_table_config(table_conf)
+
             recon_process_duration = ReconcileProcessDuration(start_ts=str(datetime.now()), end_ts=None)
             try:
                 src_schema, tgt_schema = TriggerReconService.get_schemas(
-                    reconciler.source, reconciler.target, table_conf, reconcile_config.database_config
+                    reconciler.source, reconciler.target, normalized_table_conf, reconcile_config.database_config
                 )
             except DataSourceRuntimeException as e:
                 raise ReconciliationException(message=str(e)) from e
 
-            assert table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
+            assert normalized_table_conf.aggregates, "Aggregates must be defined for Aggregates Reconciliation"
 
             table_reconcile_agg_output_list: list[AggregateQueryOutput] = (
                 TriggerReconAggregateService._run_reconcile_aggregates(
                     reconciler=reconciler,
-                    table_conf=table_conf,
+                    table_conf=normalized_table_conf,
                     src_schema=src_schema,
                     tgt_schema=tgt_schema,
                 )
@@ -59,14 +64,14 @@ class TriggerReconAggregateService:
             # Persist the data to the delta tables
             recon_capture.store_aggregates_metrics(
                 reconcile_agg_output_list=table_reconcile_agg_output_list,
-                table_conf=table_conf,
+                table_conf=normalized_table_conf,
                 recon_process_duration=recon_process_duration,
             )
 
             (
                 ReconIntermediatePersist(
                     spark=spark,
-                    path=utils.generate_volume_path(table_conf, reconcile_config.metadata_config),
+                    path=utils.generate_volume_path(normalized_table_conf, reconcile_config.metadata_config),
                 ).clean_unmatched_df_from_volume()
             )
 
