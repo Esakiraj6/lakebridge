@@ -5,6 +5,31 @@ class DialectUtils:
     _ANSI_IDENTIFIER_DELIMITER = "`"
 
     @staticmethod
+    def unnormalize_identifier(identifier: str) -> str:
+        """Return an ansi identifier without the outer backticks.
+
+        Use this at your own risk as the missing outer backticks will result in bugs.
+        E.g. <`mary's lamb`> is returned <mary's lamb> so the outer backticks are needed.
+        This is useful for scenarios where the returned identifier will be part of another delimited identifier.
+
+        :param identifier: a database identifier
+        :return: ansi identifier without the outer backticks
+        """
+        ansi = DialectUtils.ansi_normalize_identifier(identifier)
+        unescape = (
+            DialectUtils._unescape_source_end_delimiter(ansi[1:-1], DialectUtils._ANSI_IDENTIFIER_DELIMITER)
+            if ansi
+            else ansi
+        )
+        return unescape
+
+    @staticmethod
+    def ansi_normalize_identifier(identifier: str) -> str:
+        return DialectUtils.normalize_identifier(
+            identifier, DialectUtils._ANSI_IDENTIFIER_DELIMITER, DialectUtils._ANSI_IDENTIFIER_DELIMITER
+        ).ansi_normalized
+
+    @staticmethod
     def normalize_identifier(
         identifier: str, source_start_delimiter: str, source_end_delimiter: str
     ) -> NormalizedIdentifier:

@@ -36,6 +36,12 @@ def snowflake_databricks_schema():
         schema_fixture_factory("col_num10", "number(10,1)"),
         schema_fixture_factory("col_dec", "number(20,2)"),
         schema_fixture_factory("col_numeric_2", "numeric(38,0)"),
+        schema_fixture_factory("col_escaped", "float", source_delimiter='"'),
+        schema_fixture_factory("`col Escaped2`", "float", source_delimiter='"'),
+        schema_fixture_factory('"col escaped3"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col""escaped4"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col`escaped5"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col `$ EscAped6"', "float", source_delimiter='"'),
         schema_fixture_factory("dummy", "string"),
     ]
     tgt_schema = [
@@ -66,6 +72,12 @@ def snowflake_databricks_schema():
         schema_fixture_factory("col_num10", "decimal(10,1)"),
         schema_fixture_factory("col_dec", "decimal(20,1)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
+        schema_fixture_factory("col_escaped", "double", source_delimiter='`'),
+        schema_fixture_factory("`col Escaped2`", "double", source_delimiter='`'),
+        schema_fixture_factory('`col escaped3`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col"escaped4`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col``escaped5`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col ``$ EscAped6`', "double", source_delimiter='`'),
     ]
     return src_schema, tgt_schema
 
@@ -80,6 +92,12 @@ def databricks_databricks_schema():
         schema_fixture_factory("col_num10", "decimal(10,1)"),
         schema_fixture_factory("col_dec", "decimal(20,2)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
+        schema_fixture_factory("col_escaped", "double", source_delimiter='`'),
+        schema_fixture_factory("`col Escaped2`", "double", source_delimiter='`'),
+        schema_fixture_factory('`col escaped3`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col"escaped4`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col``escaped5`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col ``$ EscAped6`', "double", source_delimiter='`'),
         schema_fixture_factory("dummy", "string"),
     ]
     tgt_schema = [
@@ -91,6 +109,12 @@ def databricks_databricks_schema():
         schema_fixture_factory("col_num10", "decimal(10,1)"),
         schema_fixture_factory("col_dec", "decimal(20,1)"),
         schema_fixture_factory("col_numeric_2", "decimal(38,0)"),
+        schema_fixture_factory("col_escaped", "double", source_delimiter='`'),
+        schema_fixture_factory("`col Escaped2`", "double", source_delimiter='`'),
+        schema_fixture_factory('`col escaped3`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col"escaped4`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col``escaped5`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col ``$ EscAped6`', "double", source_delimiter='`'),
     ]
     return src_schema, tgt_schema
 
@@ -123,6 +147,12 @@ def oracle_databricks_schema():
         schema_fixture_factory("col_anytype", "anytype"),
         schema_fixture_factory("col_anydata", "anydata"),
         schema_fixture_factory("col_anydataset", "anydataset"),
+        schema_fixture_factory("col_escaped", "float", source_delimiter='"'),
+        schema_fixture_factory("`col Escaped2`", "float", source_delimiter='"'),
+        schema_fixture_factory('"col escaped3"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col""escaped4"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col`escaped5"', "float", source_delimiter='"'),
+        schema_fixture_factory('"col `$ EscAped6"', "float", source_delimiter='"'),
         schema_fixture_factory("dummy", "string"),
     ]
 
@@ -153,6 +183,12 @@ def oracle_databricks_schema():
         schema_fixture_factory("col_anytype", "string"),
         schema_fixture_factory("col_anydata", "string"),
         schema_fixture_factory("col_anydataset", "string"),
+        schema_fixture_factory("col_escaped", "double", source_delimiter='`'),
+        schema_fixture_factory("`col Escaped2`", "double", source_delimiter='`'),
+        schema_fixture_factory('`col escaped3`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col"escaped4`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col``escaped5`', "double", source_delimiter='`'),
+        schema_fixture_factory('`col ``$ EscAped6`', "double", source_delimiter='`'),
     ]
 
     return src_schema, tgt_schema
@@ -187,10 +223,9 @@ def test_snowflake_schema_compare(schemas, mock_spark):
         table_conf,
     )
     df = schema_compare_output.compare_df
-
     assert not schema_compare_output.is_valid
-    assert df.count() == 27
-    assert df.filter("is_valid = 'true'").count() == 25
+    assert df.count() == 33
+    assert df.filter("is_valid = 'true'").count() == 31
     assert df.filter("is_valid = 'false'").count() == 2
 
 
@@ -209,6 +244,12 @@ def test_databricks_schema_compare(schemas, mock_spark):
             "col_num10",
             "col_dec",
             "col_numeric_2",
+            "`col_escaped`",
+            "`col Escaped2`",
+            '`col escaped3`',
+            '`col"escaped4`',
+            '`col``escaped5`',
+            '`col ``$ EscAped6`',
         ],
         column_mapping=[
             ColumnMapping(source_name="col_char", target_name="char"),
@@ -224,8 +265,8 @@ def test_databricks_schema_compare(schemas, mock_spark):
     df = schema_compare_output.compare_df
 
     assert not schema_compare_output.is_valid
-    assert df.count() == 8
-    assert df.filter("is_valid = 'true'").count() == 7
+    assert df.count() == 14
+    assert df.filter("is_valid = 'true'").count() == 13
     assert df.filter("is_valid = 'false'").count() == 1
 
 
@@ -250,19 +291,19 @@ def test_oracle_schema_compare(schemas, mock_spark):
     df = schema_compare_output.compare_df
 
     assert schema_compare_output.is_valid
-    assert df.count() == 26
-    assert df.filter("is_valid = 'true'").count() == 26
+    assert df.count() == 32
+    assert df.filter("is_valid = 'true'").count() == 32
     assert df.filter("is_valid = 'false'").count() == 0
 
 
 def test_schema_compare(mock_spark):
     src_schema = [
-        schema_fixture_factory("col1", "int"),
-        schema_fixture_factory("col2", "string"),
+        schema_fixture_factory("col1", "int", "`col1`", "`col1`"),
+        schema_fixture_factory("col2", "string", "`col2`", "`col2`"),
     ]
     tgt_schema = [
-        schema_fixture_factory("col1", "int"),
-        schema_fixture_factory("col2", "string"),
+        schema_fixture_factory("col1", "int", "`col1`", "`col1`"),
+        schema_fixture_factory("col2", "string", "`col2`", "`col2`"),
     ]
     spark = mock_spark
     table_conf = Table(
