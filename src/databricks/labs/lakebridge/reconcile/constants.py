@@ -15,10 +15,10 @@ class AutoName(Enum):
 
 
 class ReconSourceType(AutoName):
-    SNOWFLAKE = auto()
-    ORACLE = auto()
     DATABRICKS = auto()
     MSSQL = auto()
+    ORACLE = auto()
+    SNOWFLAKE = auto()
     SYNAPSE = auto()
 
 
