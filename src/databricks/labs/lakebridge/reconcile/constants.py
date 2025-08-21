@@ -18,7 +18,8 @@ class ReconSourceType(AutoName):
     SNOWFLAKE = auto()
     ORACLE = auto()
     DATABRICKS = auto()
-    TSQL = auto()
+    MSSQL = auto()
+    SYNAPSE = auto()
 
 
 class ReconReportType(AutoName):
