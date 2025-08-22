@@ -79,7 +79,6 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
             f"&warehouse={self._get_secret('sfWarehouse')}&role={self._get_secret('sfRole')}"
         )
 
-
     def read_data(
         self,
         catalog: str | None,
@@ -152,7 +151,7 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
 
     def _get_snowflake_auth_options(self):
         try:
-            key = SnowflakeDataSource.get_private_key(
+            key = SnowflakeDataSource._get_private_key(
                 self._get_secret('pem_private_key'), self._get_secret_or_none('pem_private_key_password')
             )
             return {"pem_private_key": key}
@@ -167,7 +166,7 @@ class SnowflakeDataSource(DataSource, SecretsMixin, JDBCReaderMixin):
                 raise NotFound(message) from e
 
     @staticmethod
-    def get_private_key(pem_private_key: str, pem_private_key_password: str | None) -> str:
+    def _get_private_key(pem_private_key: str, pem_private_key_password: str | None) -> str:
         try:
             private_key_bytes = pem_private_key.encode("UTF-8")
             password_bytes = pem_private_key_password.encode("UTF-8") if pem_private_key_password else None
