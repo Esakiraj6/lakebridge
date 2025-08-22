@@ -19,20 +19,17 @@ from databricks.labs.blueprint.entrypoint import get_logger, is_in_debug
 from databricks.labs.blueprint.installation import RootJsonValue
 from databricks.labs.blueprint.tui import Prompts
 
-from databricks.labs.bladespector.analyzer import Analyzer
-
 
 from databricks.labs.lakebridge.assessments.configure_assessment import (
     create_assessment_configurator,
     PROFILER_SOURCE_SYSTEM,
 )
 
-from databricks.labs.lakebridge.__about__ import __version__
 from databricks.labs.lakebridge.config import TranspileConfig
 from databricks.labs.lakebridge.contexts.application import ApplicationContext
 from databricks.labs.lakebridge.helpers.recon_config_utils import ReconConfigPrompts
 from databricks.labs.lakebridge.helpers.telemetry_utils import make_alphanum_or_semver
-from databricks.labs.lakebridge.install import WorkspaceInstaller
+from databricks.labs.lakebridge.install import installer
 from databricks.labs.lakebridge.reconcile.runner import ReconcileRunner
 from databricks.labs.lakebridge.lineage import lineage_generator
 from databricks.labs.lakebridge.reconcile.recon_config import RECONCILE_OPERATION_NAME, AGG_RECONCILE_OPERATION_NAME
@@ -50,20 +47,6 @@ logger = get_logger(__file__)
 
 def raise_validation_exception(msg: str) -> NoReturn:
     raise ValueError(msg)
-
-
-def _installer(ws: WorkspaceClient, transpiler_repository: TranspilerRepository) -> WorkspaceInstaller:
-    app_context = ApplicationContext(_verify_workspace_client(ws))
-    return WorkspaceInstaller(
-        app_context.workspace_client,
-        app_context.prompts,
-        app_context.installation,
-        app_context.install_state,
-        app_context.product_info,
-        app_context.resource_configurator,
-        app_context.workspace_installation,
-        transpiler_repository=transpiler_repository,
-    )
 
 
 def _create_warehouse(ws: WorkspaceClient) -> str:
@@ -87,19 +70,6 @@ def _create_warehouse(ws: WorkspaceClient) -> str:
 def _remove_warehouse(ws: WorkspaceClient, warehouse_id: str):
     ws.warehouses.delete(warehouse_id)
     logger.info(f"Removed warehouse post installation with id: {warehouse_id}")
-
-
-def _verify_workspace_client(ws: WorkspaceClient) -> WorkspaceClient:
-    """
-    [Private] Verifies and updates the workspace client configuration.
-    """
-
-    # Using reflection to set right value for _product_info for telemetry
-    product_info = getattr(ws.config, '_product_info')
-    if product_info[0] != "lakebridge":
-        setattr(ws.config, '_product_info', ('lakebridge', __version__))
-
-    return ws
 
 
 @lakebridge.command
@@ -640,14 +610,14 @@ def install_transpile(
     artifact: str | None = None,
     transpiler_repository: TranspilerRepository = TranspilerRepository.user_home(),
 ) -> None:
-    """Install the Lakebridge transpilers"""
+    """Install or upgrade the Lakebridge transpilers."""
     with_user_agent_extra("cmd", "install-transpile")
     if artifact:
         with_user_agent_extra("artifact-overload", Path(artifact).name)
     user = w.current_user
     logger.debug(f"User: {user}")
-    installer = _installer(w, transpiler_repository)
-    installer.run(module="transpile", artifact=artifact)
+    transpile_installer = installer(w, transpiler_repository)
+    transpile_installer.run(module="transpile", artifact=artifact)
 
 
 @lakebridge.command(is_unauthenticated=False)
@@ -663,28 +633,23 @@ def configure_reconcile(
         dbsql_id = _create_warehouse(w)
         w.config.warehouse_id = dbsql_id
     logger.debug(f"Warehouse ID used for configuring reconcile: {w.config.warehouse_id}.")
-    installer = _installer(w, transpiler_repository)
-    installer.run(module="reconcile")
+    reconcile_installer = installer(w, transpiler_repository)
+    reconcile_installer.run(module="reconcile")
 
 
 @lakebridge.command()
-def analyze(w: WorkspaceClient, source_directory: str, report_file: str, source_tech: str | None = None) -> None:
+def analyze(
+    w: WorkspaceClient,
+    source_directory: str | None = None,
+    report_file: str | None = None,
+    source_tech: str | None = None,
+):
     """Run the Analyzer"""
     with_user_agent_extra("cmd", "analyze")
     ctx = ApplicationContext(w)
-    prompts = ctx.prompts
-    output_file = report_file
-    input_folder = source_directory
-    if source_tech is None:
-        source_tech = prompts.choice("Select the source technology", Analyzer.supported_source_technologies())
-    with_user_agent_extra("analyzer_source_tech", make_alphanum_or_semver(source_tech))
-    user = ctx.current_user
-    logger.debug(f"User: {user}")
-    is_debug = logger.getEffectiveLevel() == logging.DEBUG
-    Analyzer.analyze(Path(input_folder), Path(output_file), source_tech, is_debug=is_debug)
-    logger.info(
-        f"Successfully Analyzed files in ${source_directory} for ${source_tech} and saved report to {report_file}"
-    )
+
+    logger.debug(f"User: {ctx.current_user}")
+    ctx.analyzer.run_analyzer(source_directory, report_file, source_tech)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import logging
 import os
 import shutil
 from collections.abc import Callable, Generator, Sequence
@@ -1455,3 +1456,36 @@ def test_java_version_parse_missing() -> None:
     version_output = "Nothing in here that looks like a version."
     parsed = FriendOfWorkspaceInstaller.parse_java_version(version_output)
     assert parsed is None
+
+
+@pytest.mark.parametrize(("installed_transpilers", "is_upgrade"), (({"foo", "bar"}, True), ({}, False)))
+def test_installer_upgrade_detection(
+    ws_installer: Callable[..., WorkspaceInstaller],
+    ws: WorkspaceClient,
+    installed_transpilers: set[str],
+    is_upgrade: bool,
+    caplog,
+) -> None:
+    """Check detection of whether transpilers are already installed or not."""
+    mock_repository = create_autospec(TranspilerRepository)
+    mock_repository.all_transpiler_names.return_value = installed_transpilers
+    ctx = ApplicationContext(ws)
+
+    installer = ws_installer(
+        ctx.workspace_client,
+        ctx.prompts,
+        ctx.installation,
+        ctx.install_state,
+        ctx.product_info,
+        ctx.resource_configurator,
+        ctx.workspace_installation,
+        transpiler_repository=mock_repository,
+    )
+
+    with caplog.at_level(logging.INFO):
+        result = installer.has_installed_transpilers()
+
+    assert result == is_upgrade
+    if is_upgrade:
+        info_messages = [log.message for log in caplog.records if log.levelno == logging.INFO]
+        assert f"Detected installed transpilers: {sorted(installed_transpilers)}" in info_messages
