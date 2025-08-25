@@ -1,5 +1,5 @@
 from pathlib import Path
-from subprocess import run, CalledProcessError
+from subprocess import run, CalledProcessError, Popen, PIPE, STDOUT, DEVNULL
 from dataclasses import dataclass
 from enum import Enum
 
@@ -35,27 +35,44 @@ class StepExecutionResult:
 
 
 class PipelineClass:
-    def __init__(self, config: PipelineConfig, executor: DatabaseManager):
+    def __init__(self, config: PipelineConfig, executor: DatabaseManager | None):
         self.config = config
         self.executor = executor
         self.db_path_prefix = Path(config.extract_folder)
+        self._create_dir(self.db_path_prefix)
 
     def execute(self) -> list[StepExecutionResult]:
         logging.info(f"Pipeline initialized with config: {self.config.name}, version: {self.config.version}")
         execution_results: list[StepExecutionResult] = []
+        error_flag = False
         for step in self.config.steps:
+            logger.info(f"Executing step: {step.name}")
             result = self._process_step(step)
             execution_results.append(result)
-            logging.info(f"Step '{step.name}' completed with status: {result.status}")
+            logger.info(f"Step '{step.name}' completed with status: {result.status}")
 
-        logging.info("Pipeline execution completed")
+            # Check step execution status
+            if result.status == StepExecutionStatus.ERROR:
+                logger.error(f"Step {result.step_name} failed with error: {result.error_message}")
+                error_flag = True
+            elif result.status == StepExecutionStatus.SKIPPED:
+                logger.info(f"Step {result.step_name} was skipped.")
+            else:
+                logger.info(f"Step {result.step_name} has completed successfully.")
+
+        if error_flag:
+            failed_steps = [r for r in execution_results if r.status == StepExecutionStatus.ERROR]
+            error_msg = (
+                f"Pipeline execution failed due to errors in steps: {', '.join(r.step_name for r in failed_steps)}"
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         return execution_results
 
     def _process_step(self, step: Step) -> StepExecutionResult:
         if step.flag != "active":
             logging.info(f"Skipping step: {step.name} as it is not active")
             return StepExecutionResult(step_name=step.name, status=StepExecutionStatus.SKIPPED)
-
         logging.debug(f"Executing step: {step.name}")
         try:
             status = self._execute_step(step)
@@ -79,6 +96,10 @@ class PipelineClass:
         logging.debug(f"Reading query from file: {step.extract_source}")
         with open(step.extract_source, 'r', encoding='utf-8') as file:
             query = file.read()
+
+        if self.executor is None:
+            logging.error("DatabaseManager executor is not set.")
+            raise RuntimeError("DatabaseManager executor is not set.")
 
         # Execute the query using the database manager
         logging.info(f"Executing query: {query}")
@@ -104,51 +125,96 @@ class PipelineClass:
             venv_python = venv_dir / "bin" / "python"
             venv_pip = venv_dir / "bin" / "pip"
 
-            logger.info(f"Creating a virtual environment for Python script execution: ${venv_dir}")
-            # Install dependencies in the virtual environment
+            logger.info(f"Creating a virtual environment for Python script execution: {venv_dir} for step: {step.name}")
             if step.dependencies:
-                logging.info(f"Installing dependencies: {', '.join(step.dependencies)}")
-                try:
-                    logging.debug("Upgrading local pip")
-                    run([str(venv_pip), "install", "--upgrade", "pip"], check=True, capture_output=True, text=True)
+                self._install_dependencies(venv_pip, step.dependencies)
 
-                    run([str(venv_pip), "install", *step.dependencies], check=True, capture_output=True, text=True)
-                except CalledProcessError as e:
-                    logging.error(f"Failed to install dependencies: {e.stderr}")
-                    raise RuntimeError(f"Failed to install dependencies: {e.stderr}") from e
+            self._run_python_script(venv_python, step.extract_source, db_path, credential_config)
 
-            # Execute the Python script using the virtual environment's Python interpreter
+    @staticmethod
+    def _install_dependencies(venv_pip, dependencies):
+        logging.info(f"Installing dependencies: {', '.join(dependencies)}")
+        try:
+            logging.debug("Upgrading local pip")
+            run(
+                [
+                    str(venv_pip),
+                    "install",
+                    "--upgrade",
+                    "pip",
+                    "--require-virtualenv",
+                    "--quiet",
+                    "--no-input",
+                    "--disable-pip-version-check",
+                ],
+                check=True,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
+            )
+            run(
+                [
+                    str(venv_pip),
+                    "install",
+                    *dependencies,
+                    "--require-virtualenv",
+                    "--quiet",
+                    "--no-input",
+                    "--disable-pip-version-check",
+                ],
+                check=True,
+                stdout=DEVNULL,
+                stderr=DEVNULL,
+            )
+        except CalledProcessError as e:
+            logging.error(f"Failed to install dependencies: {e.stderr}")
+            raise RuntimeError(f"Failed to install dependencies: {e.stderr}") from e
+
+    @staticmethod
+    def _run_python_script(venv_python, script_path, db_path, credential_config):
+        output_lines = []
+        try:
+            with Popen(
+                [
+                    str(venv_python),
+                    str(script_path),
+                    "--db-path",
+                    db_path,
+                    "--credential-config-path",
+                    credential_config,
+                ],
+                stdout=PIPE,
+                stderr=STDOUT,
+                text=True,
+                bufsize=1,
+            ) as process:
+                if process.stdout is not None:
+                    for line in process.stdout:
+                        logger.info(line.rstrip())
+                        output_lines.append(line)
+                process.wait()
+        except Exception as e:
+            logging.error(f"Python script failed: {str(e)}")
+            raise RuntimeError(f"Script execution failed: {str(e)}") from e
+
+        if output_lines:
             try:
-                result = run(
-                    [
-                        str(venv_python),
-                        str(step.extract_source),
-                        "--db-path",
-                        db_path,
-                        "--credential-config-path",
-                        credential_config,
-                    ],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
+                output = json.loads(output_lines[-1])
+            except json.JSONDecodeError:
+                logging.info("Could not parse script output as JSON.")
+                output = {
+                    "status": "error",
+                    "message": "Could not parse script output as JSON, manually validate the logs.",
+                }
 
-                try:
-                    output = json.loads(result.stdout)
-                    if output["status"] == "success":
-                        logging.info(f"Python script completed: {output['message']}")
-                    else:
-                        raise RuntimeError(f"Script reported error: {output['message']}")
-                except json.JSONDecodeError:
-                    logging.info(f"Python script output: {result.stdout}")
+            if output.get("status") == "success":
+                logging.info(f"Python script completed: {output['message']}")
+            else:
+                raise RuntimeError(f"Script reported error: {output.get('message', 'Unknown error')}")
 
-            except CalledProcessError as e:
-                error_msg = e.stderr
-                logging.error(f"Python script failed: {error_msg}")
-                raise RuntimeError(f"Script execution failed: {error_msg}") from e
+        if process.returncode != 0:
+            raise RuntimeError(f"Script execution failed with exit code {process.returncode}")
 
     def _save_to_db(self, result, step_name: str, mode: str, batch_size: int = 1000):
-        self._create_dir(self.db_path_prefix)
         db_path = str(self.db_path_prefix / DB_NAME)
 
         with duckdb.connect(db_path) as conn:
@@ -179,7 +245,7 @@ class PipelineClass:
             dir_path.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def load_config_from_yaml(file_path: str) -> PipelineConfig:
+    def load_config_from_yaml(file_path: str | Path) -> PipelineConfig:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = yaml.safe_load(file)
         steps = [Step(**step) for step in data['steps']]
