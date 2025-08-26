@@ -620,6 +620,7 @@ class WorkspaceInstaller:
             schema_name=schema_name,
             sdk_config=runtime_config,
         )
+        logger.debug(f"Saving config: {config}.")
         self._save_config(config)
         return config
 
@@ -675,6 +676,8 @@ class WorkspaceInstaller:
         run_validation = self._prompts.confirm(
             "Would you like to validate the syntax and semantics of the transpiled queries?"
         )
+
+        logger.debug(f"User selected skip validation as {run_validation}.")
 
         return TranspileConfig(
             transpiler_config_path=str(transpiler_config_path) if transpiler_config_path is not None else None,
@@ -800,6 +803,7 @@ class WorkspaceInstaller:
 
     def _save_config(self, config: TranspileConfig | ReconcileConfig):
         logger.info(f"Saving configuration file {config.__file__}")
+        logger.debug(f"Configuration: {config.skip_validation}")
         self._installation.save(config)
         ws_file_url = self._installation.workspace_link(config.__file__)
         if self._prompts.confirm(f"Open config file {ws_file_url} in the browser?"):
