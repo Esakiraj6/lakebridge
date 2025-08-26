@@ -86,7 +86,7 @@ EXPLAIN SELECT
 FROM
   table;
 
- */
+*/
 
  ---------------Exception End --------------------"""
 

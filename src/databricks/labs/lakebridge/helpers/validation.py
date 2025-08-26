@@ -49,9 +49,9 @@ class Validator:
                 query = sql_text
             buffer = StringIO()
             buffer.write("-------------- Exception Start-------------------\n")
-            buffer.write("/* \n")
+            buffer.write("/*\n")
             buffer.write(str(exception_msg))
-            buffer.write("\n */ \n")
+            buffer.write("\n*/\n")
             buffer.write(query)
             buffer.write("\n ---------------Exception End --------------------\n")
 
