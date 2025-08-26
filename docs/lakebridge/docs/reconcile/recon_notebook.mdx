@@ -208,6 +208,73 @@ table_recon = TableRecon(
         )
     ]
 )
+
+```
+## Configure Recon Metadata and Dashboards using Notebook
+
+The recommended way is to use the CLI following the instructions [here](../installation#configure-reconcile).
+However, if you want to configure the metadata tables and dashboards using a notebook, you can use the following code snippet.
+This needs to be executed only once unless you want to change the metadata configuration.
+
+```python
+from importlib.resources import files
+from pathlib import Path
+
+import databricks.labs.lakebridge.resources
+from databricks.labs.lakebridge import __version__
+from databricks.labs.lakebridge.config import (
+    DatabaseConfig,
+    ReconcileConfig,
+    ReconcileMetadataConfig,
+)
+from databricks.labs.lakebridge.contexts.application import ApplicationContext
+from databricks.sdk import WorkspaceClient
+
+ws = WorkspaceClient(product="lakebridge", product_version=__version__)
+app_context = ApplicationContext(ws)
+resources = files(databricks.labs.lakebridge.resources)
+dashboards_dir = resources.joinpath("reconcile/dashboards")
+if not isinstance(dashboards_dir, Path):
+    raise TypeError("Dashboards directory is not a real filesystem path.")
+
+# Create a ReconcileConfig instance with the necessary configurations.
+# Make sure the objects exist.
+recon_config = ReconcileConfig(
+    data_source="oracle",
+    report_type="all",
+    secret_scope="lakebridge_oracle",
+    database_config=DatabaseConfig(
+        source_schema="tpch_sf100",
+        target_catalog="tpch",
+        target_schema="100gb",
+    ),
+    metadata_config=ReconcileMetadataConfig(
+        catalog="lakebridge_install_test",
+        schema="reconcile",
+        volume="reconcile_volume",
+    ),
+)
+
+query_dir = resources.joinpath("reconcile/queries/installation")
+sqls_to_deploy = [
+    "main.sql",
+    "metrics.sql",
+    "details.sql",
+    "aggregate_metrics.sql",
+    "aggregate_details.sql",
+    "aggregate_rules.sql",
+]
+for sql_file in sqls_to_deploy:
+    table_sql_file = query_dir.joinpath(sql_file)
+    app_context.table_deployment.deploy_table_from_ddl_file(
+        recon_config.metadata_config.catalog,
+        recon_config.metadata_config.schema,
+        sql_file.strip(".sql"),
+        table_sql_file,
+    )
+
+app_context.dashboard_deployment.deploy(folder=Path(dashboards_dir), config=recon_config)
+app_context.install_state.save()
 ```
 
 ## Run Reconcile
