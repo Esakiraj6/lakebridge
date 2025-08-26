@@ -77,16 +77,17 @@ async def _transpile_sql_file(
     expected_failure_sql = """-------------- Exception Start-------------------
 /*
 
-[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 2, "
-pos 7)
+[PARSE_SYNTAX_ERROR] Syntax error at or near '.'. SQLSTATE: 42601 (line 2, pos 7)
+
 == SQL ==
 EXPLAIN SELECT
   cole(...) AS world
 -------^^^
 FROM
- table;
+  table;
 
  */
+
  ---------------Exception End --------------------"""
 
     transpile_config = TranspileConfig(
