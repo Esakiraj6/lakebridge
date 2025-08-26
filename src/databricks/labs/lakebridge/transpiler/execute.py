@@ -154,7 +154,7 @@ def _process_combined_part(context: TranspilingContext, part: Message, error_lis
     output = folder / segments[-1]
     logger.debug(f"Writing output to: {output}")
     # Only validate if output file has .sql suffix
-    if context.validator and output.suffix == ".sql":
+    if output.suffix == ".sql":
         content = _validate_transpiled_sql(context, content, error_list)
     output.write_text(content)
 
@@ -166,7 +166,7 @@ def _process_non_mime_result(context: TranspilingContext, error_list: list[Trans
 
     if any(err.kind == ErrorKind.PARSING for err in error_list):
         output_code = context.source_code or ""
-    elif context.validator and output_path.suffix == ".sql":
+    elif output_path.suffix == ".sql":
         output_code = _validate_transpiled_sql(context, output_code, error_list)
     with output_path.open("w") as w:
         # The above adds a java-style comment block at the top of the output file
