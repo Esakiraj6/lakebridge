@@ -63,7 +63,7 @@ async def test_passes_log_level(lsp_engine, transpile_config):
     logging.getLogger("databricks").setLevel(logging.INFO)
     await lsp_engine.initialize(transpile_config)
     log = Path(path_to_resource("lsp_transpiler", "test-lsp-server.log")).read_text("utf-8")
-    assert "--log_level=INFO" in log  # see command_line in lsp_transpiler/config.yml
+    assert "--log_level=INFO" in log
 
 
 async def test_receives_config(lsp_engine, transpile_config):
