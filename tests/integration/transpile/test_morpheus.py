@@ -7,6 +7,7 @@ from databricks.labs.lakebridge.install import MavenInstaller
 from databricks.labs.lakebridge.transpiler.execute import transpile
 from databricks.labs.lakebridge.transpiler.lsp.lsp_engine import LSPEngine
 from databricks.labs.lakebridge.transpiler.repository import TranspilerRepository
+from .common_utils import run_transpile_and_assert
 
 
 def _install_morpheus(transpiler_repository: TranspilerRepository) -> tuple:
@@ -73,7 +74,8 @@ async def _transpile_sql_file(
   department_id DECIMAL(38, 0),
   remarks VARIANT
 );"""
-
+    # TODO investigate why morpheus produces a different error to baldebridge for the same query
+    # The expected SQL Block is custom formatted to match the output of Morpheus exactly.
     expected_failure_sql = """-------------- Exception Start-------------------
 /*
 
@@ -90,23 +92,14 @@ FROM
 
  ---------------Exception End --------------------"""
 
-    transpile_config = TranspileConfig(
-        transpiler_config_path=str(config_path),
-        source_dialect="snowflake",
-        input_source=str(input_source),
-        output_folder=str(output_folder),
-        skip_validation=False,
-        catalog_name="catalog",
-        schema_name="schema",
-    )
     # TODO: Load the engine here, via the validation path.
-    await transpile(ws, lsp_engine, transpile_config)
-    assert (output_folder / "create_ddl.sql").exists()
-    with open(output_folder / "create_ddl.sql", "r", encoding="utf-8") as f:
-        actual_sql = f.read()
-    assert actual_sql.strip() == expected_sql.strip()
-
-    assert (output_folder / "dummy_function.sql").exists()
-    with open(output_folder / "dummy_function.sql", "r", encoding="utf-8") as f:
-        actual_failure_sql = f.read()
-    assert actual_failure_sql.strip() == expected_failure_sql.strip()
+    await run_transpile_and_assert(
+        ws,
+        lsp_engine,
+        config_path,
+        input_source,
+        output_folder,
+        "snowflake",
+        expected_sql,
+        expected_failure_sql,
+    )
